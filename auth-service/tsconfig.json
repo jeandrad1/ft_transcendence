@@ -1,7 +1,8 @@
 {
   "compilerOptions": {
     "baseUrl": "src",
-    "paths": {},
+    "paths": {
+      "*": ["src/*"]},
     "typeRoots": ["./types", "./node_modules/@types"],
     "module": "ESNext",
     "target": "ES2020",
