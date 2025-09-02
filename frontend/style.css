@@ -1,13 +1,17 @@
-.hero {
-    background-color:#333;
+body {
+  background-image: url("starfield.jpg");
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center;
+  min-height: 100vh;
 }
 
 .navbar {
   width: 100%;
   font-family: "DM Sans", sans-serif;
   font-optical-sizing: auto;
-  background-color: #fff;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  background-color: transparent;
+  box-shadow: none;
   position: sticky;
   top: 0;
   z-index: 100;
@@ -37,11 +41,47 @@
   display: block;
   padding: 0.75rem 1rem;
   text-decoration: none;
-  color: #333;
+  color: #ffffff;
 }
 
-.nav-links a:hover {
-  background-color: #f2f2f2;
+.nav-links .hoverMe {
+  position: relative;
+}
+
+.nav-links .hoverMe:after {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: #9a1818;
+  content: '';
+  transition: width 0.5s ease-in-out;
+  display: block;
+}
+
+.nav-links .hoverMe:hover:after {
+  width: 100%;
+}
+
+.nav-links .hoverMe {
+  position: relative;
+}
+
+.nav-links .hoverMe:after {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: #222;
+  content: '';
+  transition: width 0.5s ease-in-out;
+  display: block;
+}
+
+.nav-links .hoverMe:hover:after {
+  width: 100%;
 }
 
 .dropdown-content {
@@ -70,6 +110,24 @@
   display: none;
   font-size: 1.5rem;
   cursor: pointer;
+}
+
+.home-text {
+  display: flex;
+  color: rgb(234, 234, 234);
+  justify-content: center;
+  flex-direction: column;
+  text-align: center;
+  height: 100%;
+}
+
+.main-title {
+  font-size: 3rem;
+  align-items: center;
+}
+
+.last-project {
+  font-size: 1.5rem;
 }
 
 @media screen and (max-width: 768px) {
