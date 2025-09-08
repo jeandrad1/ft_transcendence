@@ -2,8 +2,12 @@ import { router } from "./router";
 import { registerHandlers } from "./pages/register"
 import { loginHandlers } from "./pages/login"
 import { homeText } from "./pages/home"
+import { refreshAccessToken } from "./state/authState"
 
-function render() {
+async function render() {
+
+    await refreshAccessToken();
+
     const app = document.getElementById("app")!;
     app.innerHTML = router(window.location.hash);
     const header = document.getElementById("header")!;
