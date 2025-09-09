@@ -2,6 +2,7 @@ import Database from "better-sqlite3"
 
 const db: any = new Database("chat.db");
 
+// Table for conversations between users
 db.prepare(`
     CREATE TABLE IF NOT EXISTS conversations (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -13,6 +14,7 @@ db.prepare(`
     )
 `).run();
 
+// Message board
 db.prepare(`
     CREATE TABLE IF NOT EXISTS messages (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -26,6 +28,7 @@ db.prepare(`
     )
 `).run();
 
+// Table for blocked users
 db.prepare(`
     CREATE TABLE IF NOT EXISTS blocked_users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
