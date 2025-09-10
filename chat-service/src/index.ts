@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import cors from "@fastify/cors";
 import websocket from "@fastify/websocket";
 import { chatRoutes } from "./routes/chatRoutes";
+import "./db/sqlite"; // Initialize database
 
 // Loads .env variables into process.env
 dotenv.config();
@@ -38,7 +39,6 @@ app.get("/ping", async () => {
 await app.register(chatRoutes);
 
 // ALL: Register WebSocket handlers
-// ALL: Initialize database
 
 const PORT = process.env.PORT || 8083;
 
