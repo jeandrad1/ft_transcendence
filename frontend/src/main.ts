@@ -25,7 +25,7 @@ async function render() {
 
     if (location.hash === "#/register")
     {
-        autoRegisterUser("t", "t"); // auto register for testing purposes
+        autoRegisterUser("t", "t", "t@gmail.com"); // auto register for testing purposes
         registerHandlers();
     }
     if (location.hash === "#/login")

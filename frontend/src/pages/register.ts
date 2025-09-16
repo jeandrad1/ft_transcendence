@@ -3,6 +3,7 @@ export function Register(): string {
   return `
     <h1>Register</h1>
     <form id="register-form">
+      <input type="email" id="email" placeholder="Email" required />
       <input type="text" id="username" placeholder="Username" required />
       <input type="password" id="password" placeholder="Password" required />
       <button type="submit">Register</button>
@@ -20,12 +21,13 @@ export function registerHandlers() {
 
     const username = (document.querySelector<HTMLInputElement>("#username")!).value;
     const password = (document.querySelector<HTMLInputElement>("#password")!).value;
+    const email = (document.querySelector<HTMLInputElement>("#email")!).value;
 
     try {
       const res = await fetch("http://localhost:8080/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username, password, email }),
       });
 
       const data = await res.json();
@@ -40,12 +42,12 @@ export function registerHandlers() {
   };
 }
 
-export async function autoRegisterUser(username: string, password: string) {
+export async function autoRegisterUser(username: string, password: string, email: string) {
   try {
     const res = await fetch("http://localhost:8080/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ username, password, email }),
     });
     const data = await res.json();
     if (data.message) {
