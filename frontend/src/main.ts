@@ -1,6 +1,6 @@
 import { router } from "./router";
-import { registerHandlers } from "./pages/register"
-import { loginHandlers } from "./pages/login"
+import { registerHandlers, autoRegisterUser } from "./pages/register"
+import { loginHandlers, autoLoginUser } from "./pages/login"
 import { homeText } from "./pages/home"
 import { refreshAccessToken } from "./state/authState"
 import { pongHandlers } from "./pages/pong";
@@ -24,8 +24,13 @@ async function render() {
     }
 
     if (location.hash === "#/register")
+    {
+        autoRegisterUser("t", "t"); // auto register for testing purposes
         registerHandlers();
+    }
     if (location.hash === "#/login")
+    {
+        autoLoginUser("t", "t"); // auto login for testing purposes
         loginHandlers();
 	if (location.hash === "#/pong") {
         pongHandlers();
