@@ -1,4 +1,5 @@
 import { getConversations, sendMessage } from "../services/api";
+import { websocketClient, ChatMessage } from "../services/websocketClient";
 
 export function Chat(): string {
     return `
@@ -78,11 +79,15 @@ export function chatHandlers() {
     const loadButton = document.getElementById('load-conversations') as HTMLButtonElement;
     const messageResult = document.getElementById('message-result') as HTMLDivElement;
     const conversationsList = document.getElementById('conversations-list') as HTMLDivElement;
+    const messagesContainer = document.getElementById('messages-container') as HTMLDivElement;
 
-    if (!messageForm || !loadButton || !messageResult || !conversationsList) {
+    if (!messageForm || !loadButton || !messageResult || !conversationsList || !messagesContainer) {
         console.error('Chat elements not found in DOM');
         return;
     }
+
+    // Initialize WebSocket connection
+    initializeWebSocket();
 
     // Handle message form submission
     messageForm.addEventListener('submit', async (e: Event) => {
@@ -110,15 +115,38 @@ export function chatHandlers() {
             messageResult.innerHTML = 'Sending message...';
             messageResult.className = 'message-result';
             
-            const result = await sendMessage(recipientId, content);
+            // Send message via HTTP API (for persistence)
+            const httpResult = await sendMessage(recipientId, content);
             
-            messageResult.innerHTML = `<span class="success">✅ Message sent successfully!</span>`;
+            // Send message via WebSocket (for real-time delivery)
+            const wsMessage: ChatMessage = {
+                type: 'message',
+                userId: getCurrentUserId(),
+                recipientId: recipientId,
+                content: content,
+                timestamp: new Date().toISOString()
+            };
+            
+            const wsSent = websocketClient.sendMessage(wsMessage);
+            
+            if (wsSent) {
+                messageResult.innerHTML = '<span class="success">✅ Message sent successfully!</span>';
+                
+                // Add message to UI immediately (sent message)
+                addMessageToUI({
+                    ...wsMessage,
+                    isSent: true
+                });
+            } else {
+                messageResult.innerHTML = '<span class="success">✅ Message sent via HTTP (WebSocket offline)</span>';
+            }
+            
             messageResult.className = 'message-result success';
             
             // Clear form
             messageContentInput.value = '';
             
-            console.log('Message sent:', result);
+            console.log('Message sent:', { http: httpResult, websocket: wsSent });
             
         } catch (error) {
             console.error('Error sending message:', error);
@@ -164,4 +192,81 @@ export function chatHandlers() {
             `;
         }
     });
+
+    // Initialize WebSocket connection and message handling
+    async function initializeWebSocket() {
+        try {
+            const userId = getCurrentUserId();
+            
+            console.log(`Connecting to WebSocket with userId: ${userId}`);
+            await websocketClient.connect(userId);
+            
+            // Set up message handler for incoming messages
+            websocketClient.onMessage((message: ChatMessage) => {
+                console.log('Received WebSocket message:', message);
+                
+                if (message.type === 'message') {
+                    // Add received message to UI
+                    addMessageToUI({
+                        ...message,
+                        isSent: false
+                    });
+                }
+            });
+            
+            // Update connection status in UI
+            updateConnectionStatus(true);
+            
+        } catch (error) {
+            console.error('Failed to connect to WebSocket:', error);
+            updateConnectionStatus(false);
+        }
+    }
+
+    // Add message to the UI
+    function addMessageToUI(message: ChatMessage & { isSent: boolean }) {
+        const messagesContainer = document.getElementById('messages-container') as HTMLDivElement;
+        if (!messagesContainer) return;
+
+        // Remove welcome message if it exists
+        const welcomeMessage = messagesContainer.querySelector('.welcome-message');
+        if (welcomeMessage) {
+            welcomeMessage.remove();
+        }
+
+        // Create message bubble
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message-bubble ${message.isSent ? 'message-sent' : 'message-received'}`;
+        
+        const time = new Date(message.timestamp || Date.now()).toLocaleTimeString([], { 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        });
+        
+        messageDiv.innerHTML = `
+            <div class="message-content">${message.content}</div>
+            <div class="message-time">${time}</div>
+        `;
+        
+        messagesContainer.appendChild(messageDiv);
+        
+        // Auto-scroll to bottom
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    // Update connection status indicator
+    function updateConnectionStatus(connected: boolean) {
+        const statusElement = document.getElementById('contact-status') as HTMLSpanElement;
+        if (statusElement) {
+            statusElement.textContent = connected ? 'Online' : 'Offline';
+            statusElement.style.color = connected ? '#25D366' : '#999';
+        }
+    }
+
+    // Get current user ID (temporary implementation)
+    function getCurrentUserId(): number {
+        // TODO: Get from authState or user input
+        // For now, use a default value
+        return 1;
+    }
 }
