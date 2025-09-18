@@ -184,6 +184,9 @@ export function chatHandlers() {
                         item.addEventListener('click', () => {
                             const userId = Number(item.getAttribute('data-conversation-id'));
                             const userName = item.querySelector('.conversation-name')?.textContent || '';
+                            // Visual highlight of the active conversation
+                            document.querySelectorAll('.conversation-item').forEach(i => i.classList.remove('active'));
+                            item.classList.add('active');
                             selectConversation(userId, userName);
                         });
                     });
