@@ -1,4 +1,4 @@
-import { getConversations, sendMessage } from "../services/api";
+import { getConversations, sendMessage, getMessages } from "../services/api";
 import { websocketClient, ChatMessage } from "../services/websocketClient";
 
 // Status for active conversation
@@ -178,6 +178,17 @@ export function chatHandlers() {
                         </div>
                     `).join('');
                     
+                // Add click handlers to conversation items
+                setTimeout(() => {
+                    document.querySelectorAll('.conversation-item').forEach(item => {
+                        item.addEventListener('click', () => {
+                            const userId = Number(item.getAttribute('data-conversation-id'));
+                            const userName = item.querySelector('.conversation-name')?.textContent || '';
+                            selectConversation(userId, userName);
+                        });
+                    });
+                }, 0);
+                
                 console.log('Conversations loaded:', result);
             } else {
                 conversationsList.innerHTML = `
@@ -225,6 +236,48 @@ export function chatHandlers() {
             console.error('Failed to connect to WebSocket:', error);
             updateConnectionStatus(false);
         }
+    }
+
+    // Function to select a conversation and load messages
+    async function selectConversation(otherUserId: number, otherUserName: string) {
+        activeConversationId = otherUserId;
+        activeConversationName = otherUserName;
+
+        // Update the chat header
+        const contactName = document.getElementById('contact-name');
+        if (contactName) contactName.textContent = otherUserName;
+
+        // Charge indicator display
+        const messagesContainer = document.getElementById('messages-container');
+        if (messagesContainer) {
+            messagesContainer.innerHTML = '<div class="loading">Cargando mensajes...</div>';
+        }
+
+        try {
+            const result = await getMessages(otherUserId);
+            displayMessages(result.messages || []);
+        } catch (err) {
+            if (messagesContainer) {
+                messagesContainer.innerHTML = '<div class="error">Error cargando mensajes</div>';
+            }
+        }
+    }
+
+    // Render messages in the chat area
+    function displayMessages(messages: any[]) {
+        const messagesContainer = document.getElementById('messages-container');
+        if (!messagesContainer) return;
+        if (messages.length === 0) {
+            messagesContainer.innerHTML = '<div class="no-messages">No hay mensajes en esta conversación.</div>';
+            return;
+        }
+        messagesContainer.innerHTML = messages.map(msg => `
+            <div class="message-bubble ${msg.isSent ? 'message-sent' : 'message-received'}">
+                <div class="message-content">${msg.content}</div>
+                <div class="message-time">${new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+            </div>
+        `).join('');
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
 
     // Add message to the UI
