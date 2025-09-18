@@ -1,6 +1,10 @@
 import { getConversations, sendMessage } from "../services/api";
 import { websocketClient, ChatMessage } from "../services/websocketClient";
 
+// Status for active conversation
+let activeConversationId: number | null = null;
+let activeConversationName: string = '';
+
 export function Chat(): string {
     return `
         <div class="whatsapp-container">
