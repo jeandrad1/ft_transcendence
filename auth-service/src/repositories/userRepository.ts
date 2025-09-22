@@ -15,7 +15,12 @@ export function findUserById(userId: number) {
     return stmt.get(userId);
 }
 
-export function updateUser2FA(secret: any, userId: number) {
+export function updateUser2FA(secret: string, userId: number) {
     const stmt = db.prepare("UPDATE users SET totp_secret = ?, is_2fa_enabled = 1 WHERE id = ?")
-    stmt.run(secret.base32, userId);
+    stmt.run(secret, userId);
+}
+
+export function debugUsers() {
+    const rows = db.prepare("SELECT id, username, totp_secret FROM users").all();
+    console.log(rows);
 }
