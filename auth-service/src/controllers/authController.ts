@@ -100,8 +100,8 @@ export async function verify2FAController(req: FastifyRequest, reply: FastifyRep
     const { userId, code } = req.body as { userId: number; code: string };
 
     const user = findUserById(userId);
-    if (!user || !user.totp_secret) {
-        return reply.code(400).send({ error: "2FA not enabled" });
+    if (!user) {
+        return reply.code(400).send({ error: "User not found" });
     }
 
     let secret = user.pending_2fa_secret || user.totp_secret;
@@ -123,19 +123,18 @@ export async function verify2FAController(req: FastifyRequest, reply: FastifyRep
     if (user.pending_2fa_secret) {
         activateUser2FA(userId, user.pending_2fa_secret);
         return reply.send({ success: true, message: "2FA enabled successfully" });
-    } else {
-        const { token, refreshToken } = createTokensLogin(user);
-    
-        reply.setCookie("refreshToken", refreshToken, {
-            httpOnly: true,
-            secure: false, //Change in future to true
-            sameSite: "lax", //Change in future to strict
-            path: "/auth/refresh",
-            maxAge: 7 * 24 * 60 * 60,
-        });
-    
-        return reply.send({ accessToken: token});
     }
+    const { token, refreshToken } = createTokensLogin(user);
+    
+    reply.setCookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        secure: false, //Change in future to true
+        sameSite: "lax", //Change in future to strict
+        path: "/auth/refresh",
+        maxAge: 7 * 24 * 60 * 60,
+    });
+    
+    return reply.send({ accessToken: token});
 }
 
 export async function enable2FAController(req: FastifyRequest, reply: FastifyReply) {
@@ -147,7 +146,7 @@ export async function enable2FAController(req: FastifyRequest, reply: FastifyRep
         });
 
         updateUserPending2FA(secret.base32, userId);
-    
+        debugUsers();
         return reply.send({ message: "2FA setup started, call /generate-qr to get qr"})
 
     } catch (err: any) {
@@ -160,7 +159,8 @@ export async function generateQRController(req: FastifyRequest, reply: FastifyRe
     try {
         const { username, userId } = req.body as { username: string, userId: number};
         const pendingSecret = getUserPending2FA(userId);
-
+        console.log(`UserId: ${userId}`);
+        debugUsers();
         if (!pendingSecret) {
             return reply.code(400).send({ error: "No pending 2FA setup"});
         }
