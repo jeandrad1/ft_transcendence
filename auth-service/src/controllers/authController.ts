@@ -5,6 +5,7 @@ import * as speakeasy from "speakeasy";
 import { findUserById, updateUser2FA, debugUsers } from "../repositories/userRepository";
 import QRCode from "qrcode";
 
+
 export async function registerController(req: FastifyRequest, reply: FastifyReply) {
    const { username, password, email } = req.body as { username: string; password: string; email: string };
 
