@@ -58,7 +58,8 @@ export function loginHandlers() {
         form.style.display = "none";
         logoutBtn.style.display = "block";
         } else if (res.ok && data.requires2FA) {
-            document.body.innerHTML = TwoFAForm();
+            const app = document.getElementById("app")!;
+            app.innerHTML = TwoFAForm();
 
           const qrDiv = document.querySelector<HTMLDivElement>(".twofa-qrcode")!;
           console.log(data);
@@ -85,29 +86,39 @@ export function loginHandlers() {
 
             const twofaForm = document.querySelector<HTMLFormElement>("#twofa-form")!;
             const twofaResult = document.querySelector<HTMLParagraphElement>("#twofa-result")!;
+            const twofaInput = document.querySelector<HTMLInputElement>("#twofa-code")!;
 
             twofaForm.onsubmit = async (e) => {
-            e.preventDefault();
-
-            const code = (document.querySelector<HTMLInputElement>("#twofa-code")!).value;
-
-            const verifyRes = await fetch("http://localhost:8080/auth/verify-2fa", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ userId: data.userId, code }),
-              credentials: "include",
-            });
-
-            const verifyData = await verifyRes.json();
-            if (verifyRes.ok && verifyData.accessToken) {
-              setAccessToken(verifyData.accessToken);
+              e.preventDefault();
+              
+              const code = (document.querySelector<HTMLInputElement>("#twofa-code")!).value;
+              
+              const verifyRes = await fetch("http://localhost:8080/auth/verify-2fa", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ userId: data.userId, code }),
+                credentials: "include",
+              });
+              
+              const verifyData = await verifyRes.json();
+              if (verifyRes.ok && verifyData.accessToken) {
+                setAccessToken(verifyData.accessToken);
               twofaResult.textContent = "✅ 2FA verified, loggen in!";
-              twofaForm.style.display = "none";
-              logoutBtn.style.display = "block"
+              //twofaInput.style.display = "none";
+              //logoutBtn.style.display = "block";
+              setTimeout(() => {
+                window.location.href = "#/health";
+              }, 2000);
+              const body = document.querySelector("body")!;
+              body.style.background = "none";
+              //const html = document.querySelector("html")!;
+              //html.style.background = "none";
+              return ;
             }
             else {
               twofaResult.textContent = "❌ Invalid 2FA code"
             }
+            console.log("Nothing happens");
           }
       } else {
         result.textContent = `❌ ${data.error || "Login failed"}`;
@@ -262,6 +273,9 @@ export async function fetchQRCode(userId: number, username: string, token: strin
   export function TwoFAForm(): string {
     const body = document.querySelector("body")!;
     body.style.background = "black";
+    body.style.minHeight = "100vh";
+    const html = document.querySelector("html")!;
+    html.style.background = "black";
 
     return `
     <div class="twofa-body">
@@ -284,12 +298,12 @@ export async function fetchQRCode(userId: number, username: string, token: strin
                 <form id="twofa-form">
                     <input type="text" id="twofa-code" placeholder="6-digit code">
                     <hr style="width: 100%; border: 1px solid #5a5f66;">
-                    <div>
-                        <button type="button" id="twofa-cancel" onclick="window.location.href='#/login'">Cancel</button>
+                    <div id="twofa-buttons">
+                    <button type="button" id="twofa-cancel" onclick="window.location.href='#/login'">Cancel</button>
                         <button id="twofa-submit" type="submit">Verify</button>
+                        <p id="twofa-result"></p>
                     </div>
-                    <p id="twofa-result"></p>
-                </form>
+                    </form>
             </div>
         </div>
     </div>
