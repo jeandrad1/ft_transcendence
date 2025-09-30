@@ -655,3 +655,57 @@ header {
     width: 100%;
   }
 }
+
+/* ********************************* */
+/*              Pong                 */
+/* ********************************* */
+
+/* Pong Game Styles - Simple */
+.pong-container {
+    text-align: center;
+    padding: 20px;
+    background: #1a1a1a;
+    color: white;
+}
+
+.pong-container h1 {
+    color: #2d5a2d;
+    margin-bottom: 20px;
+}
+
+.scoreboard {
+    font-size: 2rem;
+    font-weight: bold;
+    margin-bottom: 20px;
+}
+
+#pongCanvas {
+    border: 3px solid #2d5a2d;
+    background: #000000;
+    margin-bottom: 20px;
+}
+
+.game-info p {
+    color: #cccccc;
+    margin: 10px 0;
+}
+
+.winner-message {
+    color: #ff6b6b;
+    font-weight: bold;
+    margin: 20px 0;
+}
+
+.pong-button {
+    background: #2d5a2d;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin: 10px;
+}
+
+.pong-button:hover {
+    background: #3d6a3d;
+}

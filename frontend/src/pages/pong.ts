@@ -83,15 +83,17 @@ function gameLoop()
  */
 export function pongPage() {
     return `
-        <h1>Server-Side Pong</h1>
-        <canvas id="pongCanvas" width="800" height="600"></canvas>
-        <div id="gameInfo">
-            <p>Use W/S to move Left Paddle, ArrowUp/ArrowDown for Right Paddle</p>
-            <p>Press 'P' to Pause/Resume</p>
-            <p id="scoreboard">0 : 0</p>
-            <p id="winnerMessage" style="display: none;"></p>
-            <button id="startGameBtn">Start Game</button>
-            <button id="playAgainBtn" style="display: none;">Play Again</button>
+        <div class="pong-container">
+            <h1>Server-Side Pong</h1>
+            <div id="scoreboard" class="scoreboard">0 : 0</div>
+            <canvas id="pongCanvas" width="800" height="600"></canvas>
+            <div id="gameInfo" class="game-info">
+                <p>Use W/S to move Left Paddle, ArrowUp/ArrowDown for Right Paddle</p>
+                <p>Press 'P' to Pause/Resume</p>
+                <p id="winnerMessage" class="winner-message" style="display: none;"></p>
+                <button id="startGameBtn" class="pong-button">Start Game</button>
+                <button id="playAgainBtn" class="pong-button" style="display: none;">Play Again</button>
+            </div>
         </div>
     `;
 }
@@ -216,21 +218,30 @@ function endGame() {
  */
 function draw() {
     if (!ctx) return;
-    ctx.clearRect(0, 0, 800, 600);
+    
+    // Limpiar el canvas con fondo negro
+    ctx.fillStyle = "#000000";
+    ctx.fillRect(0, 0, 800, 600);
 
-    // Dibujar borde del canvas
-    ctx.strokeStyle = "black";
-    ctx.lineWidth = 4;
-    ctx.strokeRect(0, 0, 800, 600);
+    // Línea central discontinua
+    ctx.strokeStyle = "#FFFFFF";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([10, 5]);
+    ctx.beginPath();
+    ctx.moveTo(400, 0);
+    ctx.lineTo(400, 600);
+    ctx.stroke();
+    ctx.setLineDash([]); // Reset line dash
 
-    // Dibujar paletas
-    ctx.fillStyle = "black";
+    // Dibujar paletas en blanco
+    ctx.fillStyle = "#FFFFFF";
     ctx.fillRect(30, gameState.paddles.left.y, 20, 100);
     ctx.fillRect(750, gameState.paddles.right.y, 20, 100);
 
-    // Dibujar pelota
+    // Dibujar pelota en blanco
     ctx.beginPath();
     ctx.arc(gameState.ball.x, gameState.ball.y, 10, 0, Math.PI * 2);
+    ctx.fillStyle = "#FFFFFF";
     ctx.fill();
 
     // Actualizar marcador
