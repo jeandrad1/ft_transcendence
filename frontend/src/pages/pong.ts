@@ -58,19 +58,15 @@ function gameLoop()
     if (socket && isGameRunning)
     {
         if (keysPressed.has("w")) {
-            console.log("Frontend: Sending moveUp left");
             socket.emit("moveUp", "left");
         }
         if (keysPressed.has("s")) {
-            console.log("Frontend: Sending moveDown left");
             socket.emit("moveDown", "left");
         }
         if (keysPressed.has("ArrowUp")) {
-            console.log("Frontend: Sending moveUp right");
             socket.emit("moveUp", "right");
         }
         if (keysPressed.has("ArrowDown")) {
-            console.log("Frontend: Sending moveDown right");
             socket.emit("moveDown", "right");
         }
     }
@@ -102,9 +98,20 @@ export function pongPage() {
  * @brief Sets up event handlers and socket connection for the Pong game.
  */
 export function pongHandlers() {
-    const canvas = document.getElementById("pongCanvas") as HTMLCanvasElement;
-    ctx = canvas.getContext("2d");
+    
+    if (document.readyState !== 'complete') {
+        window.addEventListener('load', pongHandlers);
+        return;
+    }
 
+    const canvas = document.getElementById("pongCanvas") as HTMLCanvasElement;
+    
+    if (!canvas) {
+        console.error("Canvas not found!");
+        return;
+    }
+    
+    ctx = canvas.getContext("2d");
     socket = io("ws://localhost:3000");
 
     function initializeGame() {
@@ -139,9 +146,7 @@ export function pongHandlers() {
     });
 
     socket.on("gamePaused", ({ paused }: { paused: boolean }) => {
-        console.log("Frontend: Received gamePaused event, paused =", paused);
         isGameRunning = !paused;
-        console.log("Frontend: isGameRunning is now", isGameRunning);
     });
 
     // Stop any previous game loop and clear keys
@@ -156,10 +161,8 @@ export function pongHandlers() {
         }
 
         if (e.key.toLowerCase() === 'p') {
-            console.log("Frontend: 'P' key pressed, sending toggle-pause request");
             fetch("http://localhost:8080/game/toggle-pause", { method: "POST" })
                 .then(response => response.json())
-                .then(data => console.log("Frontend: Toggle pause response:", data))
                 .catch(error => console.error("Frontend: Toggle pause error:", error));
         } else {
             keysPressed.add(e.key);
@@ -175,17 +178,15 @@ export function pongHandlers() {
     const startGameBtn = document.getElementById("startGameBtn");
     if (startGameBtn) {
         startGameBtn.addEventListener("click", () => {
-            console.log("Frontend: Start Game button clicked, sending fetch to /game/resume");
             fetch("http://localhost:8080/game/resume", { 
                 method: "POST",
                 mode: "cors"
             })
                 .then(response => {
-                    console.log("Frontend: Fetch response received", response.status);
+                    if (!response.ok) {
+                        console.error("Frontend: Fetch response not ok", response.status);
+                    }
                     return response.json();
-                })
-                .then(data => {
-                    console.log("Frontend: Fetch response data", data);
                 })
                 .catch(error => {
                     console.error("Frontend: Fetch error", error);
