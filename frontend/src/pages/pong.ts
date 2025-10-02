@@ -80,7 +80,7 @@ function gameLoop()
 export function pongPage() {
     return `
         <div class="pong-container">
-            <h1>Server-Side Pong</h1>
+            <h1>Local 1 vs 1 Pong</h1>
             <div id="scoreboard" class="scoreboard">0 : 0</div>
             <canvas id="pongCanvas" width="800" height="600"></canvas>
             <div id="gameInfo" class="game-info">
