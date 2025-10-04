@@ -28,7 +28,7 @@ export function router(route: string): string {
             return Chat();
 		case "#/pong":
 			return pongPage();
-         case "#/settings":
+        case "#/settings":
             return Settings();
         case "#/":
         default:
