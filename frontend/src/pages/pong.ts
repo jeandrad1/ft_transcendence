@@ -104,15 +104,12 @@ function gameLoop()
 		}
 		else
 		{
-			if (playerRole === "left")
+			if (playerRole === "left" || playerRole == "right")
 			{
-				if (keysPressed.has("w")) socket.emit("moveUp", "left", roomId);
-				if (keysPressed.has("s")) socket.emit("moveDown", "left", roomId);
-			}
-			if (playerRole === "right")
-			{
-				if (keysPressed.has("ArrowUp")) socket.emit("moveUp", "right", roomId);
-				if (keysPressed.has("ArrowDown")) socket.emit("moveDown", "right", roomId);
+				if (keysPressed.has("w") || keysPressed.has("ArrowUp"))
+					socket.emit("moveUp", playerRole, roomId);
+				if (keysPressed.has("s") || keysPressed.has("ArrowDown"))
+					socket.emit("moveDown", playerRole, roomId);
 			}
 		}
 	}
