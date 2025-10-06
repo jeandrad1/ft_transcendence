@@ -6,6 +6,7 @@ import { Health, healthHandlers } from "./pages/health";
 import { Ping } from "./pages/ping";
 import { Chat, chatHandlers } from "./pages/chat";
 import { pongPage } from "./pages/pong";
+import { Game } from "./pages/game"
 
 export function router(route: string): string {
     switch (route) {
@@ -27,6 +28,8 @@ export function router(route: string): string {
             return Chat();
 		case "#/pong":
 			return pongPage();
+        case "#/game":
+            return Game();
         case "#/":
         default:
             return Home();
