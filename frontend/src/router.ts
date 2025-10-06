@@ -6,6 +6,7 @@ import { Health, healthHandlers } from "./pages/health";
 import { Ping } from "./pages/ping";
 import { Chat, chatHandlers } from "./pages/chat";
 import { pongPage } from "./pages/pong";
+import { Settings } from "./pages/settings";
 import { Game } from "./pages/game"
 
 export function router(route: string): string {
@@ -28,6 +29,8 @@ export function router(route: string): string {
             return Chat();
 		case "#/pong":
 			return pongPage();
+        case "#/settings":
+            return Settings();
         case "#/game":
             return Game();
         case "#/":
