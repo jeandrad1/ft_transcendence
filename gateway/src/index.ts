@@ -5,6 +5,7 @@ import jwt from "jsonwebtoken";
 
 import { authMiddleware } from "./middleware/authMiddleware.js";
 import authRoutes from "./routes/authRoutes";
+import userRoutes from "./routes/userRoutes";
 import chatRoutes from "./routes/chatRoutes";
 import pongRoutes from "./routes/pongRoutes";
 
@@ -17,17 +18,18 @@ const app = Fastify({ logger: true });
 // Register routes (keep the order you prefer)
 app.register(authRoutes);
 app.register(chatRoutes);
-console.log("antes de pongRoutes");
 app.register(pongRoutes);
-console.log("despues de pongRoutes");
+app.register(userRoutes);
 
 
 // CORS (puedes dejarlo donde estaba)
 await app.register(cors, {
   origin: "http://localhost:5173",
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true
 });
+
 
 // Global hook (HTTP requests)
 // Nota: esto NO cubre el handshake WS (upgrade)

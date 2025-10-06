@@ -1,15 +1,19 @@
 import { router } from "./router";
 import { registerHandlers, autoRegisterUser } from "./pages/register"
-import { loginHandlers, autoLoginUser } from "./pages/login"
+import { loginHandlers, autoLoginUser } from "./pages/Login/login"
 import { homeText } from "./pages/home"
-import { refreshAccessToken } from "./state/authState"
+import { getAccessToken, refreshAccessToken, tempToken, tempUserId, tempUsername } from "./state/authState"
 import { pongHandlers } from "./pages/pong";
-
-async function render() {
+import { handleTwoFA } from "./pages/Login/twofa";
+import { handleOAuthErrors } from "./pages/Login/loginHandlers";
+import { fetchCurrentUser } from "./pages/Login/loginService";
+export async function render() {
 
     await refreshAccessToken();
 
     const app = document.getElementById("app")!;
+    const html = document.querySelector("html")!;
+    html.style.background = "none";
     app.innerHTML = router(window.location.hash);
     const header = document.getElementById("header")!;
     header.className = "";
@@ -26,12 +30,26 @@ async function render() {
     if (location.hash === "#/register")
     {
         autoRegisterUser("t", "t", "t@gmail.com"); // auto register for testing purposes
-        registerHandlers();
     }
     if (location.hash === "#/login")
+        {
+            const html = document.querySelector("html")!;
+            html.style.background = "#111111";
+            //autoLoginUser("t", "t"); // auto login for testing purposes
+            const accessToken = getAccessToken();
+            if (accessToken) {
+                const user = fetchCurrentUser(accessToken);
+                localStorage.setItem("user", JSON.stringify(user));
+            }
+            loginHandlers();
+            registerHandlers();
+            handleOAuthErrors();
+    }
+    if (location.hash === "#/login/2fa")
     {
-        autoLoginUser("t", "t"); // auto login for testing purposes
-        loginHandlers();
+        const html = document.querySelector("html")!;
+        html.style.background = "#111111";
+        await handleTwoFA(tempToken, tempUsername, tempUserId);
 	}
 	if (location.hash === "#/pong") {
         pongHandlers();

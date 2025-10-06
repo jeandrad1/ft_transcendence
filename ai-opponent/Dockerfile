@@ -4,11 +4,9 @@ WORKDIR /app
 
 COPY package*.json ./
 RUN npm install
-RUN npm install -g vite
-RUN npm install
 
 COPY . .
 
-EXPOSE 5173
+EXPOSE 3010
 
-CMD ["npm", "run", "dev"]
+CMD ["npx", "ts-node", "src/index.ts"]

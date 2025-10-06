@@ -1,11 +1,12 @@
 import { Home } from "./pages/home";
 import { About } from "./pages/about";
 import { Register } from "./pages/register";
-import { Login } from "./pages/login";
+import { Login, TwoFALogin } from "./pages/Login/login";
 import { Health, healthHandlers } from "./pages/health";
 import { Ping } from "./pages/ping";
 import { Chat, chatHandlers } from "./pages/chat";
 import { pongPage } from "./pages/pong";
+import { Settings } from "./pages/settings";
 
 export function router(route: string): string {
     switch (route) {
@@ -15,6 +16,8 @@ export function router(route: string): string {
             return Register();
         case "#/login":
             return Login();
+        case "#/login/2fa":
+            return TwoFALogin();
         case "#/health":
             setTimeout(healthHandlers, 0);
             return Health();
@@ -25,6 +28,8 @@ export function router(route: string): string {
             return Chat();
 		case "#/pong":
 			return pongPage();
+        case "#/settings":
+            return Settings();
         case "#/":
         default:
             return Home();

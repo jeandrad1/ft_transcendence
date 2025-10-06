@@ -56,9 +56,7 @@ services:
       - backend
 
   pong-service:
-    build:
-      context: ./server-side-pong
-      dockerfile: Dockerfile
+    build: ./server-side-pong
     container_name: trascendence-pong-service
     env_file:
       - ./server-side-pong/.env
@@ -66,6 +64,16 @@ services:
       - "3000:3000"
     networks:
       - backend
+    
+  ai-service:
+     build: ./ai-opponent
+     container_name: trascendence-ai-service
+     env_file:
+        - ./ai-opponent/.env
+     ports:
+        - "3010:3010"
+     networks:
+        - backend
 
 
 networks:

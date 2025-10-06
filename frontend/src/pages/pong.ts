@@ -9,6 +9,14 @@ let ctx: CanvasRenderingContext2D | null = null;
 let animationFrameId: number;
 let isGameRunning = false;
 let playerRole: "left" | "right" | "spectator" | "local" = "spectator";
+
+// Game constants
+const CANVAS_WIDTH = 800;
+const CANVAS_HEIGHT = 600;
+const PADDLE_WIDTH = 20;
+const PADDLE_HEIGHT = 100;
+const PADDLE_OFFSET_X = 30;
+const BALL_RADIUS = 10;
 const WINNING_SCORE = 10;
 
 // Flags y settings
@@ -47,7 +55,7 @@ export function pongPage(): string {
       </div>
       <div id="roleInfo"></div>
       <div id="scoreboard" class="scoreboard">0 : 0</div>
-      <canvas id="pongCanvas" width="800" height="600" style="display:none;"></canvas>
+      <canvas id="pongCanvas" width="${CANVAS_WIDTH}" height="${CANVAS_HEIGHT}" style="display:none;"></canvas>
       <div id="gameInfo" class="game-info" style="display:none;">
         <p id="controlsInfo"></p>
         <p>Press 'P' to Pause/Resume</p>
@@ -287,24 +295,24 @@ function draw()
 	if (!ctx) return;
 
 	ctx.fillStyle = "#000";
-	ctx.fillRect(0, 0, 800, 600);
+	ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
 	ctx.strokeStyle = "#FFF";
 	ctx.setLineDash([10, 5]);
 	ctx.beginPath();
-	ctx.moveTo(400, 0);
-	ctx.lineTo(400, 600);
+	ctx.moveTo(CANVAS_WIDTH / 2, 0);
+	ctx.lineTo(CANVAS_WIDTH / 2, CANVAS_HEIGHT);
 	ctx.stroke();
 	ctx.setLineDash([]);
 
 	ctx.fillStyle = "#FFF";
-	ctx.fillRect(30, gameState.paddles.left.y, 20, 100);
-	ctx.fillRect(750, gameState.paddles.right.y, 20, 100);
+	ctx.fillRect(PADDLE_OFFSET_X, gameState.paddles.left.y, PADDLE_WIDTH, PADDLE_HEIGHT);
+	ctx.fillRect(CANVAS_WIDTH - PADDLE_OFFSET_X - PADDLE_WIDTH, gameState.paddles.right.y, PADDLE_WIDTH, PADDLE_HEIGHT);
 
 	if (!gameState.gameEnded)
 	{
 		ctx.beginPath();
-		ctx.arc(gameState.ball.x, gameState.ball.y, 10, 0, Math.PI * 2);
+		ctx.arc(gameState.ball.x, gameState.ball.y, BALL_RADIUS, 0, Math.PI * 2);
 		ctx.fill();
 	}
 

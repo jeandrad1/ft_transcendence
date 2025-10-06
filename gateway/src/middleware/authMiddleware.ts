@@ -1,26 +1,31 @@
 import { FastifyReply, FastifyRequest } from "fastify";
+import { parse } from "url";
 import jwt from "jsonwebtoken";
 
-const publicUrls = ["/auth/login", "/auth/register", "/auth/refresh", "/ping", "/auth/verify-2fa", "/ws/pong"];
+const publicUrls = [
+    "/auth/login",
+    "/auth/register",
+    "/auth/refresh",
+    "/ping",
+    "/auth/verify-2fa",
+    "/auth/42/login",
+    "/auth/42/callback",
+    "/auth/google/login",
+    "/auth/google/callback",
+];
 
 export async function authMiddleware(req: FastifyRequest, reply: FastifyReply) {  
-	console.log(`[Auth Middleware] Processing request for: ${req.url}`); // LOG ADDED
-	if (publicUrls.some(url => req.url.startsWith(url))) {
-		        console.log(`[Auth Middleware] Public URL, skipping auth for: ${req.url}`); // LOG ADDED
+    const path = parse(req.url).pathname;
+    
+    if (publicUrls.includes(path!))
+        return ;
 
-		return;
-	}
-
-	let token: string | undefined;
     const authHeader = req.headers["authorization"];
+    if (!authHeader) {
+        return reply.code(401).send({ error: "Unauthorized: No token provided" });
+    }
 
-	if (authHeader && authHeader.startsWith("Bearer ")) {
-		token = authHeader.split(" ")[1];
-	} 
-	else if (req.query && (req.query as any).token) {
-		token = (req.query as any).token;
-	}
-
+    const token = authHeader.split(" ")[1]?.trim();
     if (!token) {
         return reply.code(401).send({ error: "Unauthorized: Malformed token" });
     }
