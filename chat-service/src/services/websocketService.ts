@@ -2,12 +2,13 @@ import { WebSocket } from '@fastify/websocket';
 
 // Types for WebSocket messages
 interface WebSocketMessage {
-    type: 'message' | 'user_connected' | 'user_disconnected' | 'typing' | 'stop_typing' | 'identify';
+    type: 'message' | 'user_connected' | 'user_disconnected' | 'typing' | 'stop_typing' | 'identify' | 'message_delivered' | 'message_read';
     userId: number;
     conversationId?: number;
     content?: string;
     timestamp?: string;
     recipientId?: number;
+    messageId?: number;
     data?: any;
 }
 
@@ -137,6 +138,30 @@ export function notifyUserStoppedTyping(fromUserId: number, toUserId: number, co
     sendToUser(toUserId, message);
 }
 
+export function notifyMessageDelivered(messageId: number, toUserId: number): void {
+    const message: WebSocketMessage = {
+        type: 'message_delivered',
+        userId: toUserId,
+        messageId,
+        timestamp: new Date().toISOString()
+    };
+    
+    // Notify the sender that their message was delivered
+    sendToUser(toUserId, message);
+}
+
+export function notifyMessageRead(messageId: number, toUserId: number): void {
+    const message: WebSocketMessage = {
+        type: 'message_read',
+        userId: toUserId,
+        messageId,
+        timestamp: new Date().toISOString()
+    };
+    
+    // Notify the sender that their message was read
+    sendToUser(toUserId, message);
+}
+
 export function notifyUserConnected(userId: number): void {
     const message: WebSocketMessage = {
         type: 'user_connected',
@@ -216,6 +241,32 @@ export function handleWebSocketMessage(websocket: WebSocket, messageData: string
                 // User stopped typing
                 if (message.userId && message.recipientId && message.conversationId) {
                     notifyUserStoppedTyping(message.userId, message.recipientId, message.conversationId);
+                }
+                break;
+                
+            case 'message_delivered':
+                // User received message - mark as delivered
+                if (message.messageId && message.userId) {
+                    import('../repositories/messageRepository.js').then(repo => {
+                        repo.markMessageAsDelivered(message.messageId!);
+                        // Notify sender that message was delivered
+                        if (message.recipientId) {
+                            notifyMessageDelivered(message.messageId!, message.recipientId);
+                        }
+                    });
+                }
+                break;
+                
+            case 'message_read':
+                // User read message - mark as read
+                if (message.conversationId && message.userId) {
+                    import('../repositories/messageRepository.js').then(repo => {
+                        repo.markMessagesAsRead(message.conversationId!, message.userId);
+                        // Notify sender that message was read
+                        if (message.recipientId && message.messageId) {
+                            notifyMessageRead(message.messageId, message.recipientId);
+                        }
+                    });
                 }
                 break;
                 
