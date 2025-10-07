@@ -65,9 +65,9 @@ services:
     networks:
       - backend
     
-  ai-service:
+  ai-opponent:
      build: ./ai-opponent
-     container_name: trascendence-ai-service
+     container_name: trascendence-ai-opponent
      env_file:
         - ./ai-opponent/.env
      ports:
