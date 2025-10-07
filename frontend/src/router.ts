@@ -29,10 +29,10 @@ export function router(route: string): string {
         case "#/chat":
             setTimeout(chatHandlers, 0);
             return Chat();
-        case "#/localPong":
+        case "#/pong/local":
             setTimeout(localPongHandlers, 0); // Añadir llamada a handlers
             return localPongPage();
-        case "#/remotePong":
+        case "#/pong/remote":
             setTimeout(remotePongHandlers, 0); // Añadir llamada a handlers
             return remotePongPage();
         case "#/settings":
