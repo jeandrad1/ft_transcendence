@@ -4,21 +4,21 @@ export function Game() : string {
         <h1>Select a Game Mode</h1>
         <hr class="game-hr">
         <div class="game-card-flex">
-            <div class="game-card local">
+        <a href="#/pong/local" class="game-card local">
             <div class="overlay">
                 <h2>Local</h2>
             </div>
-            </div>
-            <div class="game-card remote">
+            </a>
+            <a href="#/pong/remote" class="game-card remote">
             <div class="overlay">
                 <h2>Remote</h2>
             </div>
-            </div>
-            <div class="game-card tournament">
+            </a>
+            <a href="#/pong/local" class="game-card tournament">
             <div class="overlay">
                 <h2>Tournament</h2>
             </div>
-            </div>
+            </a>
         </div>
         </div>
     `
