@@ -40,6 +40,13 @@ services:
       - "8081"
     networks:
       - backend
+    
+  user-management-service:
+    build: ./user-managment
+    expose:
+      - "8082"
+    networks:
+      - backend
 
   chat-service:
     build: ./chat-service
@@ -47,6 +54,27 @@ services:
       - "8083"
     networks:
       - backend
+
+  pong-service:
+    build: ./server-side-pong
+    container_name: trascendence-pong-service
+    env_file:
+      - ./server-side-pong/.env
+    ports:
+      - "3000:3000"
+    networks:
+      - backend
+    
+  ai-service:
+     build: ./ai-opponent
+     container_name: trascendence-ai-service
+     env_file:
+        - ./ai-opponent/.env
+     ports:
+        - "3010:3010"
+     networks:
+        - backend
+
 
 networks:
   backend:

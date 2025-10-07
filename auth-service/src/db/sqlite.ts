@@ -6,7 +6,11 @@ db.prepare(`
     CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT UNIQUE,
-    password TEXT
+    password TEXT,
+    email TEXT UNIQUE,
+    totp_secret TEXT,
+    pending_2fa_secret TEXT,
+    is_2fa_enabled BOOLEAN DEFAULT 0
     )
     `).run();
 
