@@ -51,7 +51,7 @@ function startAiOpponent(roomId: string)
         try
         {
             // Ask the ai service to decide the next movement
-            const response = await fetch('http://ai-service:3010/ai/update',{
+            const response = await fetch('http://ai-service:7010/ai/update',{
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ state, side: 'right', dt: 1 }), // for now the ai is always right paddle

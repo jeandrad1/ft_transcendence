@@ -71,7 +71,9 @@ services:
      env_file:
         - ./ai-opponent/.env
      ports:
-        - "3010:3010"
+        - "7010:7010"
+     depends_on:
+      - ai-service
      networks:
         - backend
 

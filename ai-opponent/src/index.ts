@@ -8,8 +8,8 @@ import cors from 'cors';
 import { GameState, Side, AIActionResponse } from './utils/types';
 import { computeAIKeyEvents } from './services/ai';
 
-// --- Environment and Game Constants ---
-const PORT = Number(process.env.PORT || 3010);
+// Environment and Game Constants
+const PORT = Number(process.env.PORT || 7010);
 
 // Game dimensions and rules
 const CANVAS_WIDTH = 800;

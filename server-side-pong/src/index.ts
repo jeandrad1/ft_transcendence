@@ -7,7 +7,7 @@ import fastify from "fastify";
 import { Server } from "socket.io";
 import cors from "@fastify/cors";
 import { gameController, getIsPaused } from "./controllers/gameControllers";
-import {pongAIController} from "./controllers/pongAiController"
+import {pongAiController} from "./controllers/pongAiController"
 import {
   getGameState,
   moveUp,
@@ -57,7 +57,7 @@ app.register(cors, {
  * Register REST routes
  */
 gameController(app, io, rooms);
-pongAicontroller(app,io);
+pongAiController(app,io);
 
 /**
  * 	SOCKETS.IO
