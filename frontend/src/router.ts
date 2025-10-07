@@ -5,8 +5,10 @@ import { Login, TwoFALogin } from "./pages/Login/login";
 import { Health, healthHandlers } from "./pages/health";
 import { Ping } from "./pages/ping";
 import { Chat, chatHandlers } from "./pages/chat";
-import { pongPage } from "./pages/pong";
+// import { pongPage } from "./pages/pong"; // Eliminado
 import { Settings } from "./pages/settings";
+import { localPongPage, localPongHandlers } from "./pages/localPong"; // Importar handlers
+import { remotePongPage, remotePongHandlers } from "./pages/remotePong"; // Importar handlers
 
 export function router(route: string): string {
     switch (route) {
@@ -26,8 +28,12 @@ export function router(route: string): string {
         case "#/chat":
             setTimeout(chatHandlers, 0);
             return Chat();
-		case "#/pong":
-			return pongPage();
+        case "#/localPong":
+            setTimeout(localPongHandlers, 0); // Añadir llamada a handlers
+            return localPongPage();
+        case "#/remotePong":
+            setTimeout(remotePongHandlers, 0); // Añadir llamada a handlers
+            return remotePongPage();
         case "#/settings":
             return Settings();
         case "#/":
