@@ -132,7 +132,7 @@ export async function unblockUser(blockedUserId: number) {
 export async function sendGameInvitation(toUserId: number, gameType: string = 'pong') {
     try {
         const token = getAccessToken();
-        const res = await fetch('http://localhost:8080/game-invitations', {
+        const res = await fetch('http://localhost:8080/game-invitations/send', {
             method: 'POST',
             headers: { 
                 "Authorization": `Bearer ${token}`,
@@ -187,10 +187,9 @@ export async function acceptGameInvitation(invitationId: number) {
     try {
         const token = getAccessToken();
         const res = await fetch(`http://localhost:8080/game-invitations/${invitationId}/accept`, {
-            method: 'PUT',
+            method: 'POST',
             headers: { 
-                "Authorization": `Bearer ${token}`,
-                "Content-Type": "application/json"
+                "Authorization": `Bearer ${token}`
             }
         });
         if (!res.ok) {
@@ -208,10 +207,9 @@ export async function rejectGameInvitation(invitationId: number) {
     try {
         const token = getAccessToken();
         const res = await fetch(`http://localhost:8080/game-invitations/${invitationId}/reject`, {
-            method: 'PUT',
+            method: 'POST',
             headers: { 
-                "Authorization": `Bearer ${token}`,
-                "Content-Type": "application/json"
+                "Authorization": `Bearer ${token}`
             }
         });
         if (!res.ok) {
