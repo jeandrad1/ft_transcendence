@@ -116,3 +116,23 @@ export async function getCurrentUserController(req: FastifyRequest, reply: Fasti
 	console.log(`username ${user.username}`);
 	return { user };
 }
+
+// Get public user profile by ID
+export async function getUserProfileController(req: FastifyRequest, reply: FastifyReply) {
+	const { id } = req.params as { id: string };
+	
+	try {
+		const user = await getUserById(Number(id));
+		if (!user) {
+			return reply.code(404).send({ error: "User not found" });
+		}
+		
+		// Return public profile (only username, no password/email)
+		return reply.send({
+			id: user.id,
+			username: user.username
+		});
+	} catch (err: any) {
+		return reply.code(400).send({ error: err.message });
+	}
+}
