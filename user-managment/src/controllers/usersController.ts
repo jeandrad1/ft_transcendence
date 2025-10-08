@@ -113,6 +113,5 @@ export async function getCurrentUserController(req: FastifyRequest, reply: Fasti
   }
 
 	const user = await getUserById(Number(userId));
-	console.log(`username ${user.username}`);
 	return { user };
 }
