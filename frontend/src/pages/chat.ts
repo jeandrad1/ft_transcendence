@@ -449,12 +449,22 @@ export function chatHandlers() {
             messagesContainer.innerHTML = '<div class="no-messages">No hay mensajes en esta conversación.</div>';
             return;
         }
-        messagesContainer.innerHTML = messages.map(msg => `
-            <div class="message-bubble ${msg.isSent ? 'message-sent' : 'message-received'}">
-                <div class="message-content">${msg.content}</div>
-                <div class="message-time">${new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-            </div>
-        `).join('');
+        
+        const currentUserId = getCurrentUserId();
+        console.log('🔍 Display Messages - Current User ID:', currentUserId);
+        
+        messagesContainer.innerHTML = messages.map(msg => {
+            // Determine if the message was sent by the current user
+            const isSent = msg.sender_id === currentUserId || msg.isSent;
+            console.log('📨 Message:', { sender_id: msg.sender_id, currentUserId, isSent, content: msg.content?.substring(0, 20) });
+            
+            return `
+                <div class="message-bubble ${isSent ? 'message-sent' : 'message-received'}">
+                    <div class="message-content">${msg.content}</div>
+                    <div class="message-time">${new Date(msg.timestamp || msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                </div>
+            `;
+        }).join('');
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
 
