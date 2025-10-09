@@ -48,6 +48,40 @@ services:
     networks:
       - backend
 
+  livechat-service:
+    build: ./chat-service
+    expose:
+      - "8083"
+    networks:
+      - backend
+
+  pong-service:
+    build: ./server-side-pong
+    container_name: trascendence-pong-service
+    env_file:
+      - ./server-side-pong/.env
+    ports:
+      - "7000:7000"
+    networks:
+      - backend
+    
+  ai-service:
+     build: ./ai-opponent
+     container_name: trascendence-ai-service
+     env_file:
+        - ./ai-opponent/.env
+     ports:
+        - "3010:3010"
+     networks:
+        - backend
+
+ # tournament-service:
+  #  build: ./tournament-service
+  #  expose:
+  #    - "8080"
+  #  networks:
+  #    - backend
+
 networks:
   backend:
     name: backend
