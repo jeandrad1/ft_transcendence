@@ -1,14 +1,109 @@
-import { getConversations, sendMessage, getMessages, blockUser, unblockUser, sendGameInvitation, getGameInvitations, acceptGameInvitation, rejectGameInvitation, getUserProfile } from "../services/api";
+/**
+ * ==================== CHAT SYSTEM ====================
+ * 
+ * Real-time chat interface with the following features:
+ * - JWT-based authentication integration
+ * - WebSocket real-time messaging
+ * - Dynamic user management with online/offline status
+ * - Game invitation system
+ * - User blocking/unblocking
+ * - Conversation management with auto-loading
+ * - Comprehensive error handling and user feedback
+ * 
+ * Architecture:
+ * - Uses microservices backend (auth, user-management, chat services)
+ * - Implements caching for performance optimization
+ * - Real-time updates via WebSocket events
+ * - Modern modal-based UI with responsive design
+ * 
+ * ====================================================
+ */
+
+import { getConversations, sendMessage, getMessages, blockUser, unblockUser, sendGameInvitation, getGameInvitations, acceptGameInvitation, rejectGameInvitation, getUserProfile, searchUsersByUsername, getAllUsers } from "../services/api";
 import { websocketClient, ChatMessage } from "../services/websocketClient";
 import { getUserIdFromToken } from "../state/authState";
 
-// Status for active conversation
+// ==================== CONSTANTS ====================
+const CHAT_CONFIG = {
+    DEBOUNCE_DELAY: 500,
+    SEARCH_DEBOUNCE_DELAY: 300,
+    MIN_SEARCH_CHARS: 2,
+    GAME_REDIRECT_DELAY: 2000,
+    USERNAME_LOADING_DELAY: 100
+} as const;
+
+const UI_MESSAGES = {
+    LOADING: 'Loading...',
+    SENDING_MESSAGE: 'Sending message...',
+    MESSAGE_SENT_SUCCESS: '✅ Message sent successfully!',
+    MESSAGE_SENT_HTTP_ONLY: '✅ Message sent via HTTP (WebSocket offline)',
+    NO_CONVERSATION_SELECTED: 'No conversation selected',
+    MESSAGE_INPUT_NOT_FOUND: 'Message input not found',
+    ENTER_MESSAGE: 'Please enter a message',
+    LOADING_CONVERSATIONS: 'Loading conversations...',
+    NO_CONVERSATIONS_FOUND: 'No conversations found. Send a message to start chatting!',
+    LOADING_MESSAGES: 'Cargando mensajes...',
+    ERROR_LOADING_MESSAGES: 'Error cargando mensajes',
+    NO_MESSAGES: 'No hay mensajes en esta conversación.',
+    SEARCHING_USERS: 'Searching users...',
+    LOADING_USERS: 'Loading users...',
+    NO_USERS_FOUND: 'No users found',
+    NO_OTHER_USERS: 'No other users found',
+    TYPE_TO_SEARCH: 'Type at least 2 characters to search...',
+    CONNECTED: 'Connected',
+    CONNECTING: 'Connecting...',
+    DISCONNECTED: 'Disconnected'
+} as const;
+
+// ==================== STATE MANAGEMENT ====================
+// Active conversation state
 let activeConversationId: number | null = null;
 let activeConversationName: string = '';
 let blockedUsers: Set<number> = new Set(); // Track blocked users
 
-// Username cache to avoid repeated API calls
+// Caching and performance
 const usernameCache: Map<number, string> = new Map();
+
+// Real-time connection tracking
+const connectedUsersSet: Set<number> = new Set();
+
+// ==================== UTILITY FUNCTIONS ====================
+
+/**
+ * Display error message in the message result area
+ * @param message - Error message to display
+ * @param messageResultElement - DOM element to display error in
+ */
+function showErrorMessage(message: string, messageResultElement: HTMLElement | null) {
+    if (messageResultElement) {
+        messageResultElement.innerHTML = `<span class="error">❌ ${message}</span>`;
+        messageResultElement.className = 'message-result error';
+    }
+}
+
+/**
+ * Display success message in the message result area
+ * @param message - Success message to display
+ * @param messageResultElement - DOM element to display success in
+ */
+function showSuccessMessage(message: string, messageResultElement: HTMLElement | null) {
+    if (messageResultElement) {
+        messageResultElement.innerHTML = `<span class="success">✅ ${message}</span>`;
+        messageResultElement.className = 'message-result success';
+    }
+}
+
+/**
+ * Display info message in the message result area
+ * @param message - Info message to display
+ * @param messageResultElement - DOM element to display info in
+ */
+function showInfoMessage(message: string, messageResultElement: HTMLElement | null) {
+    if (messageResultElement) {
+        messageResultElement.innerHTML = message;
+        messageResultElement.className = 'message-result';
+    }
+}
 
 export function Chat(): string {
     return `
@@ -75,29 +170,49 @@ export function Chat(): string {
                 </div>
 
                 <!-- Message input area -->
+                                <!-- Message input area -->
                 <div class="message-input-area">
-                    <form id="message-form" class="message-form">
-                        <input 
-                            type="number" 
-                            id="recipient-id" 
-                            placeholder="ID destinatario" 
-                            class="recipient-input"
-                            required 
-                        />
+                    <div id="no-conversation-selected" class="no-conversation-message">
+                        <p>Select a conversation to start chatting</p>
+                        <button id="start-new-chat" class="start-chat-button">
+                            <span>+</span> New Chat
+                        </button>
+                    </div>
+                    
+                    <form id="message-form" class="message-form" style="display: none;">
                         <div class="input-with-button">
                             <input 
                                 type="text" 
                                 id="message-content" 
-                                placeholder="Write a message..." 
+                                placeholder="Escribe un mensaje..." 
                                 class="message-input"
                                 required 
                             />
                             <button type="submit" class="send-button">
-                                ➤
+                                <span>↗</span>
                             </button>
                         </div>
+                        <div id="message-result" class="message-result"></div>
                     </form>
-                    <div id="message-result" class="message-result"></div>
+                    
+                    <!-- New chat modal -->
+                    <div id="new-chat-modal" class="modal" style="display: none;">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h3>Start New Chat</h3>
+                                <button id="close-new-chat-modal" class="close-button">×</button>
+                            </div>
+                            <div class="modal-body">
+                                <input 
+                                    type="text" 
+                                    id="user-search" 
+                                    placeholder="Search users by username..." 
+                                    class="user-search-input"
+                                />
+                                <div id="user-search-results" class="user-search-results"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -133,21 +248,28 @@ export function Chat(): string {
     `;
 }
 
+/**
+ * Initialize all chat handlers and functionality
+ * Sets up DOM event listeners, WebSocket connections, and real-time features
+ */
 export function chatHandlers() {
-    // Get DOM elements with TypeScript types
+    // Get essential DOM elements with proper error handling
     const messageForm = document.getElementById('message-form') as HTMLFormElement;
     const connectionStatus = document.getElementById('connection-status') as HTMLDivElement;
     const messageResult = document.getElementById('message-result') as HTMLDivElement;
     const conversationsList = document.getElementById('conversations-list') as HTMLDivElement;
     const messagesContainer = document.getElementById('messages-container') as HTMLDivElement;
+
+    // Check essential elements
+    if (!conversationsList || !messagesContainer) {
+        console.error('Essential chat elements not found in DOM');
+        return;
+    }
+
+    // Get optional elements (these might not exist initially)
     const blockButton = document.getElementById('block-user-btn') as HTMLButtonElement;
     const inviteGameButton = document.getElementById('invite-game-btn') as HTMLButtonElement;
     const viewProfileButton = document.getElementById('view-profile-btn') as HTMLButtonElement;
-
-    if (!messageForm || !connectionStatus || !messageResult || !conversationsList || !messagesContainer || !blockButton || !inviteGameButton || !viewProfileButton) {
-        console.error('Chat elements not found in DOM');
-        return;
-    }
 
     // Debounce timer for conversation loading
     let loadConversationsTimeout: number | null = null;
@@ -162,35 +284,29 @@ export function chatHandlers() {
     messageForm.addEventListener('submit', async (e: Event) => {
         e.preventDefault();
         
-        const recipientIdInput = document.getElementById('recipient-id') as HTMLInputElement;
+        if (!activeConversationId) {
+            showErrorMessage(UI_MESSAGES.NO_CONVERSATION_SELECTED, messageResult);
+            return;
+        }
+        
         const messageContentInput = document.getElementById('message-content') as HTMLInputElement;
         
-        if (!recipientIdInput || !messageContentInput) {
-            messageResult.innerHTML = '<span class="error">Form elements not found</span>';
-            messageResult.className = 'message-result error';
+        if (!messageContentInput) {
+            showErrorMessage(UI_MESSAGES.MESSAGE_INPUT_NOT_FOUND, messageResult);
             return;
         }
 
-        const recipientId = parseInt(recipientIdInput.value);
-        const content = messageContentInput.value;
+        const content = messageContentInput.value.trim();
         const currentUserId = getCurrentUserId();
+        const recipientId = activeConversationId;
 
-        if (isNaN(recipientId) || !content.trim()) {
-            messageResult.innerHTML = '<span class="error">Please fill all fields correctly</span>';
-            messageResult.className = 'message-result error';
-            return;
-        }
-
-        // Prevent sending messages to yourself
-        if (recipientId === currentUserId) {
-            messageResult.innerHTML = '<span class="error">❌ You cannot send messages to yourself</span>';
-            messageResult.className = 'message-result error';
+        if (!content) {
+            showErrorMessage(UI_MESSAGES.ENTER_MESSAGE, messageResult);
             return;
         }
 
         try {
-            messageResult.innerHTML = 'Sending message...';
-            messageResult.className = 'message-result';
+            showInfoMessage(UI_MESSAGES.SENDING_MESSAGE, messageResult);
             
             // Send message via HTTP API (for persistence)
             const httpResult = await sendMessage(recipientId, content);
@@ -207,7 +323,9 @@ export function chatHandlers() {
             const wsSent = websocketClient.sendMessage(wsMessage);
             
             if (wsSent) {
-                messageResult.innerHTML = '<span class="success">✅ Message sent successfully!</span>';
+                if (messageResult) {
+                    messageResult.innerHTML = `<span class="success">${UI_MESSAGES.MESSAGE_SENT_SUCCESS}</span>`;
+                }
                 
                 // Add message to UI immediately (sent message)
                 addMessageToUI({
@@ -215,10 +333,14 @@ export function chatHandlers() {
                     isSent: true
                 });
             } else {
-                messageResult.innerHTML = '<span class="success">✅ Message sent via HTTP (WebSocket offline)</span>';
+                if (messageResult) {
+                    messageResult.innerHTML = `<span class="success">${UI_MESSAGES.MESSAGE_SENT_HTTP_ONLY}</span>`;
+                }
             }
             
-            messageResult.className = 'message-result success';
+            if (messageResult) {
+                messageResult.className = 'message-result success';
+            }
             
             // Auto-refresh conversations list after sending message
             loadConversationsDebounced();
@@ -230,12 +352,17 @@ export function chatHandlers() {
             
         } catch (error) {
             console.error('Error sending message:', error);
-            messageResult.innerHTML = `<span class="error">❌ Error sending message: ${error}</span>`;
-            messageResult.className = 'message-result error';
+            if (messageResult) {
+                messageResult.innerHTML = `<span class="error">❌ Error sending message: ${error}</span>`;
+                messageResult.className = 'message-result error';
+            }
         }
     });
 
-    // Debounced version to avoid excessive calls
+    /**
+     * Debounced conversation loading to prevent excessive API calls
+     * Waits for a pause in calls before actually executing
+     */
     function loadConversationsDebounced() {
         if (loadConversationsTimeout) {
             clearTimeout(loadConversationsTimeout);
@@ -243,13 +370,16 @@ export function chatHandlers() {
         
         loadConversationsTimeout = setTimeout(() => {
             loadConversationsAuto();
-        }, 500); // Wait 500ms before actually loading
+        }, CHAT_CONFIG.DEBOUNCE_DELAY);
     }
 
-    // Auto-load conversations function
+    /**
+     * Automatically load and display conversations with real usernames
+     * Handles loading states and error scenarios
+     */
     async function loadConversationsAuto() {
         try {
-            conversationsList.innerHTML = '<div class="loading">Loading conversations...</div>';
+            conversationsList.innerHTML = `<div class="loading">${UI_MESSAGES.LOADING_CONVERSATIONS}</div>`;
             
             const result = await getConversations();
             
@@ -260,7 +390,7 @@ export function chatHandlers() {
                         <div class="conversation-item" data-user-id="${conv.otherUserId}">
                             <div class="conversation-avatar">${conv.otherUserId.toString().slice(-1)}</div>
                             <div class="conversation-info">
-                                <div class="conversation-name">Loading...</div>
+                                <div class="conversation-name">${UI_MESSAGES.LOADING}</div>
                                 <div class="conversation-preview">Last updated: ${new Date(conv.updatedAt).toLocaleString()}</div>
                             </div>
                         </div>
@@ -300,13 +430,13 @@ export function chatHandlers() {
                             selectConversation(userId, userName);
                         });
                     });
-                }, 100); // Small delay to ensure usernames are loaded
+                }, CHAT_CONFIG.USERNAME_LOADING_DELAY);
                 
                 console.log('Conversations loaded:', result);
             } else {
                 conversationsList.innerHTML = `
                     <div class="no-conversations">
-                        <p>No conversations found. Send a message to start chatting!</p>
+                        <p>${UI_MESSAGES.NO_CONVERSATIONS_FOUND}</p>
                     </div>
                 `;
             }
@@ -324,8 +454,62 @@ export function chatHandlers() {
     // Load conversations automatically on page load
     loadConversationsAuto();
 
-    // Handle block/unblock user button
-    blockButton.addEventListener('click', async () => {
+    // Handle new chat button
+    const startNewChatBtn = document.getElementById('start-new-chat') as HTMLButtonElement;
+    const newChatModal = document.getElementById('new-chat-modal') as HTMLDivElement;
+    const closeNewChatModalBtn = document.getElementById('close-new-chat-modal') as HTMLButtonElement;
+    const userSearchInput = document.getElementById('user-search') as HTMLInputElement;
+    const userSearchResults = document.getElementById('user-search-results') as HTMLDivElement;
+
+    if (startNewChatBtn && newChatModal && closeNewChatModalBtn && userSearchInput && userSearchResults) {
+        // Open new chat modal
+        startNewChatBtn.addEventListener('click', async () => {
+            newChatModal.style.display = 'block';
+            userSearchInput.focus();
+            // Load all users by default
+            await loadAllUsers();
+        });
+
+        // Close modal
+        closeNewChatModalBtn.addEventListener('click', () => {
+            newChatModal.style.display = 'none';
+            userSearchInput.value = '';
+            userSearchResults.innerHTML = '';
+        });
+
+        // Close modal when clicking outside
+        newChatModal.addEventListener('click', (e) => {
+            if (e.target === newChatModal) {
+                newChatModal.style.display = 'none';
+                userSearchInput.value = '';
+                userSearchResults.innerHTML = '';
+            }
+        });
+
+        // Handle user search
+        let searchTimeout: number | null = null;
+        userSearchInput.addEventListener('input', () => {
+            if (searchTimeout) {
+                clearTimeout(searchTimeout);
+            }
+            
+            searchTimeout = setTimeout(async () => {
+                const query = userSearchInput.value.trim();
+                if (query.length >= CHAT_CONFIG.MIN_SEARCH_CHARS) {
+                    await handleUserSearch(query);
+                } else if (query.length === 0) {
+                    // If search is empty, show all users
+                    await loadAllUsers();
+                } else {
+                    userSearchResults.innerHTML = `<div class="loading">${UI_MESSAGES.TYPE_TO_SEARCH}</div>`;
+                }
+            }, CHAT_CONFIG.SEARCH_DEBOUNCE_DELAY);
+        });
+    }
+
+    // Handle block/unblock user button (if it exists)
+    if (blockButton) {
+        blockButton.addEventListener('click', async () => {
         if (!activeConversationId) {
             alert('No conversation selected');
             return;
@@ -364,9 +548,11 @@ export function chatHandlers() {
             messageResult.className = 'message-result error';
         }
     });
+    }
 
-    // Handle view profile button click
-    viewProfileButton.addEventListener('click', async () => {
+    // Handle view profile button click (if it exists)
+    if (viewProfileButton) {
+        viewProfileButton.addEventListener('click', async () => {
         if (!activeConversationId) {
             alert('No conversation selected');
             return;
@@ -383,8 +569,12 @@ export function chatHandlers() {
             alert('Failed to load user profile');
         }
     });
+    }
 
-    // Initialize WebSocket connection and message handling
+    /**
+     * Initialize WebSocket connection with real-time message handling
+     * Sets up event listeners for messages, user connections, and game invitations
+     */
     async function initializeWebSocket() {
         try {
             const userId = getCurrentUserId();
@@ -410,6 +600,18 @@ export function chatHandlers() {
                         // Auto-refresh conversations list to show new message/conversation
                         loadConversationsDebounced();
                     }
+                } else if (message.type === 'user_connected') {
+                    // Track user connection
+                    if (message.userId) {
+                        connectedUsersSet.add(message.userId);
+                        console.log(`User ${message.userId} connected. Online users:`, Array.from(connectedUsersSet));
+                    }
+                } else if (message.type === 'user_disconnected') {
+                    // Track user disconnection
+                    if (message.userId) {
+                        connectedUsersSet.delete(message.userId);
+                        console.log(`User ${message.userId} disconnected. Online users:`, Array.from(connectedUsersSet));
+                    }
                 }
             });
             
@@ -422,30 +624,70 @@ export function chatHandlers() {
         }
     }
 
-    // Handle game invitation WebSocket events
+    /**
+     * Handle game redirection after accepting invitation
+     * @param result - Game invitation result data
+     */
+    function handleGameRedirection(result: any) {
+        try {
+            // Future implementation: redirect to multiplayer game when ready
+            // window.location.hash = `#/pong/remote?opponent=${result.opponentId}`;
+            
+            // Current implementation: redirect to game selection
+            window.location.hash = '#/game';
+            console.log('Redirected to game selection. Opponent data:', result);
+        } catch (error) {
+            console.error('Error handling game redirection:', error);
+            // Fallback: show error message
+            if (messageResult) {
+                messageResult.innerHTML = '<span class="error">❌ Failed to redirect to game</span>';
+                messageResult.className = 'message-result error';
+            }
+        }
+    }
+
+    /**
+     * Handle incoming game invitation events via WebSocket
+     * @param eventData - Event data containing invitation details
+     */
     function handleGameInvitationEvent(eventData: any) {
         const eventType = eventData.event_type;
         
         switch (eventType) {
             case 'game_invitation_received':
                 console.log('🎮 New game invitation received:', eventData);
-                messageResult.innerHTML = `<span class="success">🎮 User ${eventData.from_user_id} invited you to play ${eventData.game_type}!</span>`;
-                messageResult.className = 'message-result success';
+                // Get real username instead of hardcoded "User X"
+                getUsername(eventData.from_user_id).then(username => {
+                    if (messageResult) {
+                        messageResult.innerHTML = `<span class="success">🎮 ${username} invited you to play ${eventData.game_type}!</span>`;
+                        messageResult.className = 'message-result success';
+                    }
+                });
                 // Reload invitations to show the new one
                 loadGameInvitations();
                 break;
                 
             case 'game_invitation_accepted':
                 console.log('✅ Game invitation accepted:', eventData);
-                messageResult.innerHTML = `<span class="success">✅ User ${eventData.to_user_id} accepted your invitation!</span>`;
-                messageResult.className = 'message-result success';
-                // TODO: Redirect to game page
+                // Get real username instead of hardcoded "User X"
+                getUsername(eventData.to_user_id).then(username => {
+                    if (messageResult) {
+                        messageResult.innerHTML = `<span class="success">✅ ${username} accepted your invitation!</span>`;
+                        messageResult.className = 'message-result success';
+                    }
+                });
+                // TODO: Implement game redirection when multiplayer is ready
                 break;
                 
             case 'game_invitation_rejected':
                 console.log('❌ Game invitation rejected:', eventData);
-                messageResult.innerHTML = `<span class="error">❌ User ${eventData.to_user_id} rejected your invitation</span>`;
-                messageResult.className = 'message-result error';
+                // Get real username instead of hardcoded "User X"
+                getUsername(eventData.to_user_id).then(username => {
+                    if (messageResult) {
+                        messageResult.innerHTML = `<span class="error">❌ ${username} rejected your invitation</span>`;
+                        messageResult.className = 'message-result error';
+                    }
+                });
                 break;
                 
             default:
@@ -482,6 +724,9 @@ export function chatHandlers() {
         if (inviteBtn) {
             inviteBtn.style.display = 'block';
         }
+
+        // Update message input visibility
+        updateMessageInputVisibility();
 
         // Charge indicator display
         const messagesContainer = document.getElementById('messages-container');
@@ -566,11 +811,11 @@ export function chatHandlers() {
             if (connected) {
                 statusIndicator.textContent = '●';
                 (statusIndicator as HTMLElement).style.color = '#25D366';
-                statusText.textContent = 'Connected';
+                statusText.textContent = UI_MESSAGES.CONNECTED;
             } else {
                 statusIndicator.textContent = '●';
                 (statusIndicator as HTMLElement).style.color = '#ff4444';
-                statusText.textContent = 'Disconnected';
+                statusText.textContent = UI_MESSAGES.DISCONNECTED;
             }
         }
     }
@@ -602,7 +847,11 @@ export function chatHandlers() {
         return 0; // Return 0 to indicate no user
     }
 
-    // Get username with caching to avoid repeated API calls
+    /**
+     * Get username with intelligent caching to optimize performance
+     * @param userId - The user ID to get username for
+     * @returns Promise resolving to username string
+     */
     async function getUsername(userId: number): Promise<string> {
         // Check cache first
         if (usernameCache.has(userId)) {
@@ -638,10 +887,12 @@ export function chatHandlers() {
             
             if (invitations.length > 0) {
                 invitationsSection.style.display = 'block';
+                
+                // First show loading placeholders
                 invitationsList.innerHTML = invitations.map((inv: any) => `
                     <div class="invitation-item" data-invitation-id="${inv.id}">
                         <div class="invitation-info">
-                            <span class="invitation-user">🎮 User ${inv.from_user_id}</span>
+                            <span class="invitation-user">🎮 ${UI_MESSAGES.LOADING}</span>
                             <span class="invitation-game">${inv.game_type}</span>
                         </div>
                         <div class="invitation-actions">
@@ -650,6 +901,15 @@ export function chatHandlers() {
                         </div>
                     </div>
                 `).join('');
+                
+                // Then load real usernames asynchronously
+                invitations.forEach(async (inv: any) => {
+                    const username = await getUsername(inv.from_user_id);
+                    const userElement = document.querySelector(`[data-invitation-id="${inv.id}"] .invitation-user`);
+                    if (userElement) {
+                        userElement.textContent = `🎮 ${username}`;
+                    }
+                });
                 
                 // Add event listeners to invitation buttons
                 setTimeout(() => {
@@ -688,14 +948,10 @@ export function chatHandlers() {
             // Reload invitations
             await loadGameInvitations();
             
-            // Redirect to game selection page after 2 seconds
+            // Redirect to game page after 2 seconds
             setTimeout(() => {
-                // TODO: Change to remote pong with opponent when multiplayer is implemented
-                // window.location.hash = `#/pong/remote?opponent=${result.opponentId}`;
-                // For now, redirect to game selection page
-                window.location.hash = '#/game';
-                console.log('Redirected to game selection. Opponent ID:', result.opponentId);
-            }, 2000);
+                handleGameRedirection(result);
+            }, CHAT_CONFIG.GAME_REDIRECT_DELAY);
         } catch (error: any) {
             messageResult.innerHTML = `<span class="error">❌ Error: ${error.message}</span>`;
             messageResult.className = 'message-result error';
@@ -794,22 +1050,235 @@ export function chatHandlers() {
         });
     }
 
-    // Handle invite to game button
-    inviteGameButton.addEventListener('click', async () => {
+    // Handle invite to game button (if it exists)
+    if (inviteGameButton) {
+        inviteGameButton.addEventListener('click', async () => {
         if (!activeConversationId) {
-            messageResult.innerHTML = '<span class="error">No conversation selected</span>';
-            messageResult.className = 'message-result error';
+            if (messageResult) {
+                messageResult.innerHTML = '<span class="error">No conversation selected</span>';
+                messageResult.className = 'message-result error';
+            }
             return;
         }
 
         try {
             const result = await sendGameInvitation(activeConversationId, 'pong');
-            messageResult.innerHTML = '<span class="success">🎮 Game invitation sent!</span>';
-            messageResult.className = 'message-result success';
+            if (messageResult) {
+                messageResult.innerHTML = '<span class="success">🎮 Game invitation sent!</span>';
+                messageResult.className = 'message-result success';
+            }
             console.log('Game invitation sent:', result);
         } catch (error: any) {
-            messageResult.innerHTML = `<span class="error">❌ ${error.message}</span>`;
-            messageResult.className = 'message-result error';
+            if (messageResult) {
+                messageResult.innerHTML = `<span class="error">❌ ${error.message}</span>`;
+                messageResult.className = 'message-result error';
+            }
         }
     });
+    }
+
+    // Function to show/hide message input based on conversation selection
+    function updateMessageInputVisibility() {
+        const noConversationDiv = document.getElementById('no-conversation-selected') as HTMLDivElement;
+        const messageForm = document.getElementById('message-form') as HTMLFormElement;
+        
+        if (activeConversationId) {
+            if (noConversationDiv) noConversationDiv.style.display = 'none';
+            if (messageForm) messageForm.style.display = 'flex';
+        } else {
+            if (noConversationDiv) noConversationDiv.style.display = 'block';
+            if (messageForm) messageForm.style.display = 'none';
+        }
+    }
+
+    // Function to handle user search
+    async function handleUserSearch(query: string) {
+        const userSearchResults = document.getElementById('user-search-results') as HTMLDivElement;
+        
+        try {
+            userSearchResults.innerHTML = `<div class="loading">${UI_MESSAGES.SEARCHING_USERS}</div>`;
+            
+            // First try to search, if it fails, filter from available users
+            let users;
+            try {
+                users = await searchUsersByUsername(query);
+            } catch (error) {
+                console.warn('Search API not available, filtering from known users:', error);
+                // Fallback: filter from available users
+                const allUsers = await getAvailableUsers();
+                users = allUsers.filter((user: any) => 
+                    user.username.toLowerCase().includes(query.toLowerCase()) ||
+                    user.email.toLowerCase().includes(query.toLowerCase())
+                );
+            }
+            
+            if (users && users.length > 0) {
+                const currentUserId = getCurrentUserId();
+                const filteredUsers = users.filter((user: any) => user.id !== currentUserId);
+                const connectedUsers = getConnectedUsersList();
+                
+                // Separate online and offline users
+                const onlineUsers = filteredUsers.filter((user: any) => connectedUsers.includes(user.id));
+                const offlineUsers = filteredUsers.filter((user: any) => !connectedUsers.includes(user.id));
+                
+                let html = '';
+                
+                if (onlineUsers.length > 0) {
+                    html += '<div class="users-section"><h4>🟢 Online Results</h4>';
+                    html += renderUserList(onlineUsers, true);
+                    html += '</div>';
+                }
+                
+                if (offlineUsers.length > 0) {
+                    html += '<div class="users-section"><h4>⚫ Offline Results</h4>';
+                    html += renderUserList(offlineUsers, false);
+                    html += '</div>';
+                }
+                
+                if (html) {
+                    userSearchResults.innerHTML = html;
+                    attachUserClickHandlers();
+                } else {
+                    userSearchResults.innerHTML = '<div class="no-results">No matching users found</div>';
+                }
+            } else {
+                userSearchResults.innerHTML = '<div class="no-results">No users found</div>';
+            }
+        } catch (error) {
+            console.error('Error searching users:', error);
+            userSearchResults.innerHTML = '<div class="error">Error searching users</div>';
+        }
+    }
+
+    /**
+     * Load all users from database and display with real-time online/offline status
+     * Separates users into online and offline sections for better UX
+     */
+    async function loadAllUsers() {
+        const userSearchResults = document.getElementById('user-search-results') as HTMLDivElement;
+        
+        try {
+            userSearchResults.innerHTML = `<div class="loading">${UI_MESSAGES.LOADING_USERS}</div>`;
+            
+            // Get all users from the database
+            const allUsers = await getAllUsers();
+            // Get connected users for online status (from WebSocket service)
+            const connectedUsers = getConnectedUsersList();
+            
+            if (allUsers && allUsers.length > 0) {
+                const currentUserId = getCurrentUserId();
+                const filteredUsers = allUsers.filter((user: any) => user.id !== currentUserId);
+                
+                // Separate online and offline users
+                const onlineUsers = filteredUsers.filter((user: any) => connectedUsers.includes(user.id));
+                const offlineUsers = filteredUsers.filter((user: any) => !connectedUsers.includes(user.id));
+                
+                let html = '';
+                
+                if (onlineUsers.length > 0) {
+                    html += '<div class="users-section"><h4>🟢 Online Users</h4>';
+                    html += renderUserList(onlineUsers, true);
+                    html += '</div>';
+                }
+                
+                if (offlineUsers.length > 0) {
+                    html += '<div class="users-section"><h4>⚫ Offline Users</h4>';
+                    html += renderUserList(offlineUsers, false);
+                    html += '</div>';
+                }
+                
+                if (html) {
+                    userSearchResults.innerHTML = html;
+                    attachUserClickHandlers();
+                } else {
+                    userSearchResults.innerHTML = '<div class="no-results">No other users found</div>';
+                }
+            } else {
+                userSearchResults.innerHTML = '<div class="no-results">No users found</div>';
+            }
+        } catch (error) {
+            console.error('Error loading users:', error);
+            userSearchResults.innerHTML = '<div class="error">Error loading users</div>';
+        }
+    }
+
+    // Function to render user list with online/offline status
+    function renderUserList(users: any[], isOnline: boolean): string {
+        return users.map((user: any) => `
+            <div class="user-search-item" data-user-id="${user.id}">
+                <div class="user-avatar">
+                    ${user.username.charAt(0).toUpperCase()}
+                    <div class="user-status ${isOnline ? 'online' : 'offline'}"></div>
+                </div>
+                <div class="user-info">
+                    <div class="user-name">${user.username}</div>
+                    <div class="user-email">${user.email}</div>
+                </div>
+                <button class="start-conversation-btn" data-user-id="${user.id}" data-username="${user.username}">
+                    Chat
+                </button>
+            </div>
+        `).join('');
+    }
+
+    // Function to attach click handlers to user items
+    function attachUserClickHandlers() {
+        document.querySelectorAll('.start-conversation-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const userId = Number((e.target as HTMLElement).getAttribute('data-user-id'));
+                const username = (e.target as HTMLElement).getAttribute('data-username') || 'Unknown';
+                
+                // Start conversation with this user
+                selectConversation(userId, username);
+                
+                // Close modal
+                const modal = document.getElementById('new-chat-modal') as HTMLDivElement;
+                if (modal) {
+                    modal.style.display = 'none';
+                    const searchInput = document.getElementById('user-search') as HTMLInputElement;
+                    if (searchInput) searchInput.value = '';
+                    const userSearchResults = document.getElementById('user-search-results') as HTMLDivElement;
+                    if (userSearchResults) userSearchResults.innerHTML = '';
+                }
+                
+                // Refresh conversations to show new conversation
+                loadConversationsDebounced();
+            });
+        });
+    }
+
+    /**
+     * Get available users from database via API
+     * @returns Promise resolving to array of user objects
+     */
+    async function getAvailableUsers(): Promise<any[]> {
+        try {
+            // Use the getAllUsers API endpoint to get real users from database
+            const allUsers = await getAllUsers();
+            const currentUserId = getCurrentUserId();
+            
+            if (allUsers && Array.isArray(allUsers)) {
+                // Filter out the current user
+                return allUsers.filter((user: any) => user.id !== currentUserId);
+            }
+            
+            return [];
+        } catch (error) {
+            console.error('Error getting available users:', error);
+            // Return empty array instead of hardcoded fallback users
+            return [];
+        }
+    }
+
+    /**
+     * Get list of currently connected users tracked via WebSocket events
+     * @returns Array of user IDs currently online
+     */
+    function getConnectedUsersList(): number[] {
+        // Return the array of currently connected users tracked via WebSocket events
+        return Array.from(connectedUsersSet);
+    }
+
+    // Update visibility on page load
+    updateMessageInputVisibility();
 }
