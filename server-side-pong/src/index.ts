@@ -158,28 +158,50 @@ io.on("connection", (socket) =>
 	socket.on("disconnect", () =>
 	{
 		console.log("Player disconnected:", socket.id);
-    	for (const [roomId, room] of rooms.entries())
-    	{
-    		const playerIndex = room.players.indexOf(socket.id);
-    		if (playerIndex !== -1)
-      		{
-        		// Deletes the player from the room
-        		room.players.splice(playerIndex, 1);
-
-		        io.to(roomId).emit("opponentDisconnected");
-        		console.log(`Player ${socket.id} left room ${roomId}. Notifying remaining players.`);
-
-	        	if (room.players.length < 2)
-    	    	{
-					rooms.delete(roomId);
-					// use deleteRoom to ensure timers/state cleared properly
-					deleteRoom(roomId);
-					console.log(`Room ${roomId} and its game state have been deleted via deleteRoom().`);
-        		}
-        		break;
-      		}
-    	}
-  	});
+		for (const [roomId, room] of rooms.entries())
+		{
+			const playerIndex = room.players.indexOf(socket.id);
+			if (playerIndex !== -1)
+			{
+				// Player was in this room, remove them
+				room.players.splice(playerIndex, 1);
+				const remainingPlayerId = room.players[0]; // The one left
+	
+				// If the game was ongoing, grant victory to the remaining player
+				const state = getGameState(roomId);
+				if (!state.gameEnded)
+				{
+					// Determine which side won
+					if (remainingPlayerId)
+					{
+						// Find the role of the disconnected player to determine the winner
+						// This is a simplified assumption; a more robust system would store roles
+						const disconnectedPlayerRole = playerIndex === 0 ? "left" : "right";
+						if (disconnectedPlayerRole === "left") {
+							state.scores.right = WINNING_SCORE;
+						} else {
+							state.scores.left = WINNING_SCORE;
+						}
+					}
+					state.gameEnded = true;
+					io.to(roomId).emit("gameState", state); // Notify about the win
+				}
+	
+				// Notify remaining player and clean up the room
+				if (remainingPlayerId) {
+					io.to(roomId).emit("opponentDisconnected");
+					console.log(`Player ${socket.id} left room ${roomId}. Notifying remaining player.`);
+				}
+	
+				// Delete the room since it's no longer playable
+				rooms.delete(roomId);
+				deleteRoom(roomId);
+				console.log(`Room ${roomId} and its game state have been deleted.`);
+				
+				break; // Exit loop once the room is handled
+			}
+		}
+	});
 
 	/**  
 	* Handle sockets that are leaving rooms before the final 'disconnect' event.

@@ -3,16 +3,18 @@
  * @brief Core game logic for Pong (supports Local + Online rooms)
  */
 
-const WINNING_SCORE = 10;
-const CANVAS_WIDTH = 800;
-const CANVAS_HEIGHT = 600;
-const BALL_RADIUS = 10;
-const PADDLE_HEIGHT = 100;
-const PADDLE_SPEED = 10;
-const PADDLE_OFFSET_X = 30;
-const PADDLE_WIDTH = 20;
-const BALL_SPEED_X = 5;
-const BALL_SPEED_Y = 5;
+import {
+	WINNING_SCORE,
+	CANVAS_WIDTH,
+	CANVAS_HEIGHT,
+	BALL_RADIUS,
+	PADDLE_HEIGHT,
+	PADDLE_SPEED,
+	PADDLE_OFFSET_X,
+	PADDLE_WIDTH,
+	BALL_SPEED_X,
+	BALL_SPEED_Y,
+} from "../utils/pong-constants";
 
 // Map to keep pending serve timers per room (including 'local') so we can clear them
 const serveTimers = new Map<string, NodeJS.Timeout>();
@@ -105,6 +107,33 @@ export function moveDown(side: "left" | "right", roomId?: string): GameState
 	return state;
 }
 
+function handlePaddleCollision(ball: Ball, paddle: Paddle, side: 'left' | 'right') {
+	const paddleCenter = paddle.y + PADDLE_HEIGHT / 2;
+	const impactPoint = ball.y - paddleCenter;
+	const normalizedImpact = impactPoint / (PADDLE_HEIGHT / 2);
+	const bounceAngle = normalizedImpact * (Math.PI / 4); // Max bounce angle: 45 degrees
+
+	const speed = Math.sqrt(ball.dx * ball.dx + ball.dy * ball.dy);
+	
+	ball.dx = speed * Math.cos(bounceAngle);
+	if (side === 'right')
+	{
+		ball.dx = -ball.dx;
+	}
+	
+	ball.dy = speed * Math.sin(bounceAngle);
+
+	// Prevent ball from getting stuck inside paddle
+	if (side === 'left')
+	{
+		ball.x = PADDLE_OFFSET_X + PADDLE_WIDTH + BALL_RADIUS;
+	}
+	else
+	{
+		ball.x = CANVAS_WIDTH - PADDLE_OFFSET_X - PADDLE_WIDTH - BALL_RADIUS;
+	}
+}
+
 export function updateGame(roomId?: string): GameState
 {
 	const state = getGameState(roomId);
@@ -126,21 +155,54 @@ export function updateGame(roomId?: string): GameState
 		ball.dy *= -1;
 	}
 
-	// left paddle collision (consider ball radius)
-	const leftPaddleRightX = PADDLE_OFFSET_X + PADDLE_WIDTH;
-	if ((ball.x - BALL_RADIUS) <= leftPaddleRightX && (ball.x + BALL_RADIUS) >= PADDLE_OFFSET_X) {
-		if (ball.y >= state.paddles.left.y && ball.y <= state.paddles.left.y + PADDLE_HEIGHT) {
-			// ensure the ball moves to the right after collision
-			ball.dx = Math.abs(ball.dx) > 0 ? Math.abs(ball.dx) : BALL_SPEED_X;
-		}
-	}
-  	
-	// right paddle collision (consider ball radius)
-	const rightPaddleLeftX = CANVAS_WIDTH - PADDLE_OFFSET_X - PADDLE_WIDTH;
-	if ((ball.x + BALL_RADIUS) >= rightPaddleLeftX && (ball.x - BALL_RADIUS) <= (CANVAS_WIDTH - PADDLE_OFFSET_X)) {
-		if (ball.y >= state.paddles.right.y && ball.y <= state.paddles.right.y + PADDLE_HEIGHT) {
-			// ensure the ball moves to the left after collision
-			ball.dx = -Math.abs(ball.dx) !== 0 ? -Math.abs(ball.dx) : -BALL_SPEED_X;
+	// Paddle collision logic
+	const paddles = [
+		{ side: "left" as const, paddle: state.paddles.left },
+		{ side: "right" as const, paddle: state.paddles.right }
+	];
+
+	for (const { side, paddle } of paddles) {
+		const paddleX = (side === 'left') ? PADDLE_OFFSET_X : CANVAS_WIDTH - PADDLE_OFFSET_X - PADDLE_WIDTH;
+		const paddleY = paddle.y;
+
+		// Broad phase collision check
+		if (ball.x + BALL_RADIUS > paddleX && ball.x - BALL_RADIUS < paddleX + PADDLE_WIDTH &&
+			ball.y + BALL_RADIUS > paddleY && ball.y - BALL_RADIUS < paddleY + PADDLE_HEIGHT)
+			{
+			// Narrow phase collision check
+			const isFrontCollision = (side === 'left' && ball.dx < 0) || (side === 'right' && ball.dx > 0);
+
+			if (isFrontCollision)
+			{
+				// Check if the collision is primarily horizontal (front face)
+				const paddleCenterY = paddleY + PADDLE_HEIGHT / 2;
+				const distY = Math.abs(ball.y - paddleCenterY);
+				
+				// Simple check: if ball is not near the top/bottom edges, treat as front collision
+				if (distY < PADDLE_HEIGHT / 2)
+				{
+					handlePaddleCollision(ball, paddle, side);
+				}
+				else
+				{
+					// It's a corner/edge case, treat as vertical collision
+					ball.dy *= -1;
+				}
+			}
+			else
+			{
+				// If not moving towards paddle front, must be a top/bottom collision
+				ball.dy *= -1;
+				// prevent sticking
+				if (ball.y < paddleY)
+				{
+					ball.y = paddleY - BALL_RADIUS;
+				} 
+				else
+				{
+					ball.y = paddleY + PADDLE_HEIGHT + BALL_RADIUS;
+				}
+			}
 		}
 	}
 
@@ -184,7 +246,8 @@ function resetBall(state: GameState, serveTo: "left" | "right", roomId?: string)
 	// Clear any pending serve timer for this room to avoid multiple timers
 	const key = roomId ?? 'local';
 	const existing = serveTimers.get(key);
-	if (existing) {
+	if (existing)
+	{
 		clearTimeout(existing);
 		serveTimers.delete(key);
 	}

@@ -12,14 +12,15 @@ const roomId = "local"; // Always local for this mode
 
 const apiHost = `http://${window.location.hostname}:8080`;
 
-// Game constants
-const CANVAS_WIDTH = 800;
-const CANVAS_HEIGHT = 600;
-const PADDLE_WIDTH = 20;
-const PADDLE_HEIGHT = 100;
-const PADDLE_OFFSET_X = 30;
-const BALL_RADIUS = 10; // Corregido para que la bola sea visible
-const WINNING_SCORE = 10;
+import {
+	WINNING_SCORE,
+	CANVAS_WIDTH,
+	CANVAS_HEIGHT,
+	BALL_RADIUS,
+	PADDLE_HEIGHT,
+	PADDLE_WIDTH,
+	PADDLE_OFFSET_X,
+} from "../utils/pong-constants";
 
 const keysPressed = new Set<string>();
 
