@@ -9,12 +9,14 @@ import cors from "@fastify/cors";
 import { gameController, getIsPaused } from "./controllers/gameControllers";
 import {pongAiController} from "./controllers/pongAiController"
 import {
-  getGameState,
-  moveUp,
-  moveDown,
-  updateGame,
-  isGameEnded,
-  roomStates,
+	getGameState,
+	moveUp,
+	moveDown,
+	updateGame,
+	isGameEnded,
+	roomStates,
+	resetGame,
+	deleteRoom,
 } from "./services/gameServices";
 
 const app = fastify({ logger: true });
@@ -34,8 +36,21 @@ function findOrCreateRoom(socketId: string): { roomId: string; role: "left" | "r
 {
 	for (const [roomId, room] of rooms.entries())
 	{
+		// If the room has only one player, verify that the player socket is still connected.
 		if (room.players.length === 1)
 		{
+			const existingPlayerId = room.players[0];
+			const existingSocket = io.sockets.sockets.get(existingPlayerId as any);
+			if (!existingSocket || !existingSocket.connected)
+			{
+				// Stale room: remove and continue searching
+				rooms.delete(roomId);
+				deleteRoom(roomId);
+				console.log(`Removed stale room ${roomId} (player ${existingPlayerId} not connected).`);
+				continue;
+			}
+
+			// Valid single-player room, join it
 			room.players.push(socketId);
 			return { roomId, role: "right" };
 		}
@@ -68,20 +83,56 @@ pongAiController(app,io);
 io.on("connection", (socket) =>
 {
 	console.log("Player connected:", socket.id);
-	socket.join("local");
 
-	socket.on("joinRoom", () =>
+	// Do NOT auto-join all sockets into the shared "local" room.
+	// Clients must explicitly request to join "local" by emitting { roomId: 'local' }.
+
+	// joinRoom accepts an optional payload: { roomId?: string }
+	socket.on("joinRoom", (payload?: { roomId?: string }) =>
 	{
-    	const { roomId, role } = findOrCreateRoom(socket.id);
-    	socket.join(roomId);
+		// If client asked to join the special local room, handle it separately
+		if (payload && payload.roomId === "local")
+		{
+			// Use adapter to get a fresh view of the room. This reduces race conditions
+			// when multiple sockets try to join at the same time.
+			const localSetBefore = io.sockets.adapter.rooms.get("local");
+			const localCountBefore = localSetBefore ? localSetBefore.size : 0;
+			if (localCountBefore >= 2) {
+				// Room is full; inform the client
+				socket.emit('roomFull', { roomId: 'local' });
+				console.log(`Socket ${socket.id} attempted to join local but it is full.`);
+				return;
+			}
 
-    	socket.emit("roomJoined", { roomId, role });
-    	console.log(`Socket ${socket.id} joined ${roomId} as ${role}`);
+			// Proceed to join and recompute role based on the updated adapter state
+			socket.join('local');
+			const localSet = io.sockets.adapter.rooms.get('local');
+			const localCount = localSet ? localSet.size : 0;
+			const role: 'left' | 'right' = localCount === 1 ? 'left' : 'right';
 
-	    const currentRoom = rooms.get(roomId);
-    	if (currentRoom && currentRoom.players.length === 2)
-    	{
-    		console.log(`Room ${roomId} is full. Emitting 'gameReady'.`);
+			socket.emit('roomJoined', { roomId: 'local', role });
+			console.log(`Socket ${socket.id} joined local as ${role}`);
+
+			// If there are exactly two players now, start the gameReady
+			if (localCount === 2)
+			{
+				console.log(`Local room is full. Emitting 'gameReady'.`);
+				io.to('local').emit('gameReady', { roomId: 'local' });
+			}
+			return;
+		}
+
+		// Otherwise, perform matchmaking for online rooms
+		const { roomId, role } = findOrCreateRoom(socket.id);
+		socket.join(roomId);
+
+		socket.emit("roomJoined", { roomId, role });
+		console.log(`Socket ${socket.id} joined ${roomId} as ${role}`);
+
+		const currentRoom = rooms.get(roomId);
+		if (currentRoom && currentRoom.players.length === 2)
+		{
+			console.log(`Room ${roomId} is full. Emitting 'gameReady'.`);
 			io.to(roomId).emit("gameReady", { roomId });
 		}
 	});
@@ -120,14 +171,40 @@ io.on("connection", (socket) =>
 
 	        	if (room.players.length < 2)
     	    	{
-        			rooms.delete(roomId);
-          			roomStates.delete(roomId);
-          			console.log(`Room ${roomId} and its game state have been deleted.`);
+					rooms.delete(roomId);
+					// use deleteRoom to ensure timers/state cleared properly
+					deleteRoom(roomId);
+					console.log(`Room ${roomId} and its game state have been deleted via deleteRoom().`);
         		}
         		break;
       		}
     	}
   	});
+
+	/**  
+	* Handle sockets that are leaving rooms before the final 'disconnect' event.
+	* This is useful to detect if a socket was part of the special 'local' room
+	* and notify remaining players or reset the local state accordingly.
+	*/
+	socket.on('disconnecting', () => {
+		try {
+			if (socket.rooms && socket.rooms.has('local')) {
+				const localSet = io.sockets.adapter.rooms.get('local');
+				const currentSize = localSet ? localSet.size : 0;
+				const remaining = Math.max(0, currentSize - 1); // after this socket leaves
+				if (remaining > 0) {
+					io.to('local').emit('opponentDisconnected');
+					console.log(`Player ${socket.id} left local. Notifying remaining players.`);
+				} else {
+					// No players left in local, reset its state
+					resetGame('local');
+					console.log('Local room emptied. Reset local state.');
+				}
+			}
+		} catch (err) {
+			console.error('Error handling disconnecting for socket', socket.id, err);
+		}
+	});
 });
 
 /**

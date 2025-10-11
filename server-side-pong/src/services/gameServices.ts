@@ -6,12 +6,16 @@
 const WINNING_SCORE = 10;
 const CANVAS_WIDTH = 800;
 const CANVAS_HEIGHT = 600;
+const BALL_RADIUS = 10;
 const PADDLE_HEIGHT = 100;
 const PADDLE_SPEED = 10;
 const PADDLE_OFFSET_X = 30;
 const PADDLE_WIDTH = 20;
 const BALL_SPEED_X = 5;
 const BALL_SPEED_Y = 5;
+
+// Map to keep pending serve timers per room (including 'local') so we can clear them
+const serveTimers = new Map<string, NodeJS.Timeout>();
 
 export interface Paddle { y: number; }
 export interface Ball { x: number; y: number; dx: number; dy: number; }
@@ -61,6 +65,18 @@ export function resetGame(roomId?: string): GameState
 	return state;
 }
 
+export function deleteRoom(roomId: string)
+{
+	// Clear any pending serve timer
+	const timer = serveTimers.get(roomId);
+	if (timer) {
+		clearTimeout(timer);
+		serveTimers.delete(roomId);
+	}
+	// Remove stored state
+	roomStates.delete(roomId);
+}
+
 export function getGameState(roomId?: string): GameState
 {
 	if (roomId && roomId !== "local") return roomStates.get(roomId) ?? resetGame(roomId);
@@ -98,18 +114,34 @@ export function updateGame(roomId?: string): GameState
 	ball.x += ball.dx;
 	ball.y += ball.dy;
 
-	if (ball.y <= 0 || ball.y >= 600) ball.dy *= -1;
-
-	// left paddle
-	if (ball.x <= PADDLE_OFFSET_X + PADDLE_WIDTH && ball.y >= state.paddles.left.y && ball.y <= state.paddles.left.y + PADDLE_HEIGHT)
+	// Vertical wall collision using ball radius and clamp to bounds
+	if (ball.y - BALL_RADIUS <= 0)
 	{
-		ball.dx *= -1;
+		ball.y = BALL_RADIUS;
+		ball.dy *= -1;
+	}
+	else if (ball.y + BALL_RADIUS >= CANVAS_HEIGHT)
+	{
+		ball.y = CANVAS_HEIGHT - BALL_RADIUS;
+		ball.dy *= -1;
+	}
+
+	// left paddle collision (consider ball radius)
+	const leftPaddleRightX = PADDLE_OFFSET_X + PADDLE_WIDTH;
+	if ((ball.x - BALL_RADIUS) <= leftPaddleRightX && (ball.x + BALL_RADIUS) >= PADDLE_OFFSET_X) {
+		if (ball.y >= state.paddles.left.y && ball.y <= state.paddles.left.y + PADDLE_HEIGHT) {
+			// ensure the ball moves to the right after collision
+			ball.dx = Math.abs(ball.dx) > 0 ? Math.abs(ball.dx) : BALL_SPEED_X;
+		}
 	}
   	
-	// right paddle
-	if (ball.x >= CANVAS_WIDTH - PADDLE_OFFSET_X - PADDLE_WIDTH && ball.y >= state.paddles.right.y && ball.y <= state.paddles.right.y + PADDLE_HEIGHT)
-	{
-		ball.dx *= -1;
+	// right paddle collision (consider ball radius)
+	const rightPaddleLeftX = CANVAS_WIDTH - PADDLE_OFFSET_X - PADDLE_WIDTH;
+	if ((ball.x + BALL_RADIUS) >= rightPaddleLeftX && (ball.x - BALL_RADIUS) <= (CANVAS_WIDTH - PADDLE_OFFSET_X)) {
+		if (ball.y >= state.paddles.right.y && ball.y <= state.paddles.right.y + PADDLE_HEIGHT) {
+			// ensure the ball moves to the left after collision
+			ball.dx = -Math.abs(ball.dx) !== 0 ? -Math.abs(ball.dx) : -BALL_SPEED_X;
+		}
 	}
 
 	// Point for the right player
@@ -149,12 +181,22 @@ function resetBall(state: GameState, serveTo: "left" | "right", roomId?: string)
 
 	(state.ball as any).serveDirection = serveTo;
 
+	// Clear any pending serve timer for this room to avoid multiple timers
+	const key = roomId ?? 'local';
+	const existing = serveTimers.get(key);
+	if (existing) {
+		clearTimeout(existing);
+		serveTimers.delete(key);
+	}
+
 	if (!state.gameEnded)
 	{
-		setTimeout(() => {
-	  		startBallMovement(roomId);
+		const t = setTimeout(() => {
+			serveTimers.delete(key);
+			startBallMovement(roomId);
 		}, 1000); // 1 second delay
-  }
+		serveTimers.set(key, t);
+	}
 }
 
 
@@ -170,7 +212,8 @@ export function startBallMovement(roomId?: string)
 		const serveDirection = (state.ball as any).serveDirection || (Math.random() > 0.5 ? "left" : "right");
 
 		state.ball.dx = serveDirection === "left" ? -BALL_SPEED_X : BALL_SPEED_X;
-		state.ball.dy = Math.random() > 0.5 ? BALL_SPEED_Y : -BALL_SPEED_Y;
+		// Ensure dy respects ball radius and is not zero
+		state.ball.dy = (Math.random() > 0.5 ? BALL_SPEED_Y : -BALL_SPEED_Y) || BALL_SPEED_Y;
 
 		delete (state.ball as any).serveDirection; // cleaning
   	}

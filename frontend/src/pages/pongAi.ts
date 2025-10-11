@@ -4,7 +4,7 @@
  */
 import { io, Socket } from "socket.io-client";
 
-// --- COPIADO DE PONG.TS (con pequeñas modificaciones) ---
+// COPIADO DE PONG.TS (con pequeñas modificaciones) ---
 
 let socket: Socket;
 let ctx: CanvasRenderingContext2D | null = null;
@@ -12,6 +12,8 @@ let animationFrameId: number;
 let isGameRunning = false;
 let playerRole: "left" | "right" = "left"; // El jugador siempre es 'left'
 let roomId = "";
+
+const apiHost = `http://${window.location.hostname}:8080`;
 
 // Game constants
 const CANVAS_WIDTH = 800;
@@ -74,7 +76,8 @@ function cleanup() {
 const handleKeyDown = (e: KeyboardEvent) => {
     if (["ArrowUp", "ArrowDown", "w", "s"].includes(e.key)) e.preventDefault();
     if (e.key.toLowerCase() === "p") {
-        fetch(`http://localhost:8080/game/${roomId}/toggle-pause`, { method: "POST" });
+        fetch(`${apiHost}/game/${roomId}/toggle-pause`, { method: "POST" });
+        return;
     } else {
         keysPressed.add(e.key);
     }
@@ -105,15 +108,15 @@ export function pongAiHandlers() {
     });
 
     document.getElementById("startGameBtn")!.addEventListener("click", () => {
-        fetch(`http://localhost:8080/game/${roomId}/resume`, { method: "POST" });
+        fetch(`${apiHost}/game/${roomId}/resume`, { method: "POST" });
         (document.getElementById("startGameBtn")!).style.display = "none";
-        isGameRunning = true;
+        // Wait for server event to set isGameRunning
     });
 
     document.getElementById("playAgainBtn")!.addEventListener("click", () => {
         document.getElementById("winnerMessage")!.style.display = "none";
         document.getElementById("playAgainBtn")!.style.display = "none";
-        fetch(`http://localhost:8080/game/${roomId}/init`, { method: "POST" }).then(() => {
+        fetch(`${apiHost}/game/${roomId}/init`, { method: "POST" }).then(() => {
             (document.getElementById("startGameBtn")!).style.display = "block";
         });
         isGameRunning = false;
@@ -128,18 +131,20 @@ function prepareGameUI() {
 }
 
 function startGameVsAI() {
-    socket = io("ws://localhost:3000");
+    const wsHost = `ws://${window.location.hostname}:7000`;
+    socket = io(wsHost);
     roomId = "ai-room-" + Math.random().toString(36).substring(2, 8);
 
     socket.on('connect', () => {
-        socket.emit("joinRoom", { roomId }); // Se une a una sala única
-        
-        // Llama al nuevo endpoint para activar la IA en el backend
-        fetch(`http://localhost:8080/game/${roomId}/start-ai`, { method: "POST" });
+        // Join the dedicated AI room on the Pong server
+        socket.emit("joinRoom", { roomId });
+
+        // Start AI on the backend game controller
+        fetch(`${apiHost}/game/${roomId}/start-ai`, { method: "POST" });
     });
 
     const initGame = (currentRoomId: string) => {
-        fetch(`http://localhost:8080/game/${currentRoomId}/init`, { method: "POST" });
+        fetch(`${apiHost}/game/${currentRoomId}/init`, { method: "POST" });
         isGameRunning = false;
     };
 

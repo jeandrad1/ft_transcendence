@@ -128,7 +128,7 @@ export function remotePongHandlers() {
         if (!roomId) return;
         fetch(`${apiHost}/game/${roomId}/resume`, { method: "POST" });
         (document.getElementById("startGameBtn")!).classList.add("hidden");
-        isGameRunning = true;
+        // Do NOT set isGameRunning here. Wait for server 'gamePaused' event with paused=false.
     });
 
     document.getElementById("playAgainBtn")!.addEventListener("click", () => {
@@ -153,21 +153,41 @@ function startGame() {
     socket = io(wsHost);
 
     document.getElementById("roleInfo")!.textContent = "Waiting for an opponent...";
-    socket.emit("joinRoom");
+    // Wait for the socket to be connected before emitting joinRoom
+    socket.on('connect', () => {
+        socket.emit("joinRoom");
+    });
 
     socket.on("roomJoined", (data: { roomId: string, role: "left" | "right" }) => {
         roomId = data.roomId;
-        playerRole = data.role;
-    
+        // If the server returns no valid role, treat as spectator
+        playerRole = (data && (data as any).role) ? (data as any).role : "spectator";
+
         const roleInfo = document.getElementById("roleInfo")!;
-        roleInfo.textContent = `You are: ${playerRole} in room ${roomId}. Waiting for opponent...`;
+        if (playerRole === 'spectator') {
+            roleInfo.textContent = `You are a spectator in room ${roomId}. Waiting for players...`;
+            // hide start button for spectators
+            (document.getElementById("startGameBtn")!).classList.add("hidden");
+        } else {
+            roleInfo.textContent = `You are: ${playerRole} in room ${roomId}. Waiting for opponent...`;
+        }
+    });
+
+    socket.on('roomFull', (payload: { roomId: string }) => {
+        alert('Room is full. Try again later.');
+        console.warn('Attempted to join full room', payload);
     });
 
     socket.on("gameReady", (data: { roomId: string }) => {
-        document.getElementById("roleInfo")!.textContent = `You are ${playerRole} in room ${data.roomId}. Opponent found!`;
+        document.getElementById("roleInfo")!.textContent = `Room ${data.roomId} is ready. Opponent found!`;
         fetch(`${apiHost}/game/${data.roomId}/init`, { method: "POST" });
         isGameRunning = false;
-        (document.getElementById("startGameBtn")!).classList.remove("hidden");
+        // Only show start button to actual players
+        if (playerRole === 'left' || playerRole === 'right') {
+            (document.getElementById("startGameBtn")!).classList.remove("hidden");
+        } else {
+            (document.getElementById("startGameBtn")!).classList.add("hidden");
+        }
     });
 
     socket.on("gameState", (state: GameState) => {

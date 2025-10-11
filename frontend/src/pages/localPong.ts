@@ -163,7 +163,13 @@ function prepareGameUI() {
 
 async function startGame(isAiMode: boolean) {
     const wsHost = `ws://${window.location.hostname}:7000`;
+
     socket = io(wsHost);
+
+    // Join the "local" room after the socket connects to avoid race conditions
+    socket.on('connect', () => {
+        socket.emit("joinRoom", { roomId: "local" });
+    });
 
     isGameRunning = false;
     cancelAnimationFrame(animationFrameId);
@@ -197,6 +203,11 @@ async function startGame(isAiMode: boolean) {
         if (state.gameEnded) {
             checkWinner();
         }
+    });
+
+    socket.on('roomFull', (payload: { roomId: string }) => {
+        alert('Local room is full. Please try again later or use Remote mode.');
+        console.warn('Attempted to join full local room', payload);
     });
 
     socket.on("gamePaused", (payload: boolean | { paused: boolean }) => {
