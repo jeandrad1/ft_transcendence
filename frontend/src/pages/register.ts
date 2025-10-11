@@ -1,3 +1,5 @@
+const apiHost = `${window.location.hostname}`;
+
 export function Register(): string {
   return `
     <h1>Register</h1>
@@ -25,7 +27,7 @@ export function registerHandlers() {
       const email = (document.querySelector<HTMLInputElement>("#email")!).value;
   
       try {
-        const res = await fetch("http://localhost:8080/auth/register", {
+        const res = await fetch(`http://${apiHost}:8080/auth/register`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ username, password, email }),

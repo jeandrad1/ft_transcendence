@@ -1,5 +1,7 @@
 import { getAccessToken } from "../state/authState";
 
+const apiHost = `${window.location.hostname}`;
+
 export function Settings() {
   const accessToken = getAccessToken();
   if (!accessToken) {
@@ -32,7 +34,7 @@ export function settingsHandlers(accessToken: string) {
     async function fetchUserData() {
       try {
         const accessToken = getAccessToken();
-        const me = await fetch("http://localhost:8080/users/me", {
+        const me = await fetch("http://${apiHost}:8080/users/me", {
           method: "GET",
           headers: {
             Authorization: `Bearer ${accessToken}`,
