@@ -21,7 +21,11 @@ export function Settings() {
             <input type="text" id="newUsername" value="Enter a new Username" />
             <button type="button" id="changeUsernameBTN">Change Username</button>
           </div>
-          <p id="useremail"></p>
+          <div class="email">
+            <p id="useremail"></p>
+            <input type="text" id="newEmail" value="Enter a new Email" />
+            <button type="button" id="changeEmailBTN">Change Email</button>
+          </div>
         </form>
       </div>
   `;
@@ -32,6 +36,8 @@ export function settingsHandlers(accessToken: string) {
   const emailField = document.querySelector<HTMLParagraphElement>("#useremail")!;
   const newUsername = document.querySelector<HTMLInputElement>("#newUsername")!;
   const changeUsernameBtn = document.querySelector<HTMLButtonElement>("#changeUsernameBTN")!;
+  const newEmail = document.querySelector<HTMLInputElement>("#newEmail")!;
+  const changeEmailBtn = document.querySelector<HTMLButtonElement>("#changeEmailBTN")!;
 
   // Traer datos del usuario
   async function fetchUserData() {
@@ -78,12 +84,43 @@ export function settingsHandlers(accessToken: string) {
       const data = await res.json();
       if (res.ok) {
         console.log("Username changed successfully");
-        usernameField.textContent = `Username: ${newUsername.value}`;
-        newUsername.value = "";
-      } else {
+        location.reload();
+      } 
+      else {
         console.error("Error changing username:", data.error);
       }
-    } catch (err) {
+    } 
+    catch (err) {
+      console.error("⚠️ Failed to reach server", err);
+    }
+  });
+
+  // Listener para cambiar email
+  changeEmailBtn.addEventListener("click", async (e) => {
+    e.preventDefault();
+    const currentEmail = emailField.textContent?.replace("Email: ", "");
+    if (!newEmail.value || newEmail.value === currentEmail) {
+      return;
+    }
+    try {
+      const res = await fetch ("http://localhost:8080/users/changeEmail", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ newEmail: newEmail.value }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        console.log("Email changed successfully");
+        location.reload();
+      }
+      else {
+        console.error("Error changing email:", data.error);
+      }
+    }
+    catch (err) {
       console.error("⚠️ Failed to reach server", err);
     }
   });

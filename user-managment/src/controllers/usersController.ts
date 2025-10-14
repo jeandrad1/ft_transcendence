@@ -1,6 +1,6 @@
 import bcrypt from "bcrypt";
 import { FastifyReply, FastifyRequest } from "fastify";
-import { registerUser, register42User, changeUsername , getUserByUsername, getUserById, getUserByEmail } from "../services/usersService";
+import { registerUser, register42User, changeUsername , changeEmail , getUserByUsername, getUserById, getUserByEmail } from "../services/usersService";
 
 export async function registerController(req: FastifyRequest, reply: FastifyReply) {
 	const { email, username, password } = req.body as { email: string; username: string; password: string };
@@ -65,8 +65,8 @@ export async function usernameChanger(req: FastifyRequest, reply: FastifyReply) 
 	}
 }
 
-export async function usernameChanger(req: FastifyRequest, reply: FastifyReply) {
-	const { newUsername } = req.body as { newUsername: string };
+export async function emailChanger(req: FastifyRequest, reply: FastifyReply) {
+	const { newEmail } = req.body as { newEmail: string };
 	const userId = req.headers["x-user-id"];
 
 	if (!userId) {
@@ -74,16 +74,16 @@ export async function usernameChanger(req: FastifyRequest, reply: FastifyReply) 
 	}
 
 	try {
-		const existingUser = await getUserByUsername(newUsername);
+		const existingUser = await getUserByEmail(newEmail);
 		if (existingUser) {
-			return reply.code(400).send({ error: "Username already exists" });
+			return reply.code(400).send({ error: "Email already exists" });
 		}
-		console.log("Controller -> Changing username for user ID:", userId);
-		console.log("Controller -> New username:", newUsername);
-		const result = await changeUsername(userId, newUsername);
+		console.log("Controller -> Changing email for user ID:", userId);
+		console.log("Controller -> New email:", newEmail);
+		const result = await changeEmail(userId, newEmail);
 		return reply.send({ result });
 	} catch (err: any) {
-		console.error("Error occurred during username change:", err);
+		console.error("Error occurred during email change:", err);
 		return reply.code(400).send({ error: err.message });
 	}
 }

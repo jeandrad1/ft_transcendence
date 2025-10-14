@@ -1,4 +1,4 @@
-import { createUser, usernameChanger, findUserByUsername, findUserById, findUserByEmail, findIDByUsername, findAllUsers } from "../repositories/usersRepository";
+import { createUser, usernameChanger, emailChanger , findUserByUsername, findUserById, findUserByEmail, findIDByUsername, findAllUsers } from "../repositories/usersRepository";
 
 export async function registerUser(email: string, username: string, password: string) {
     createUser(username, password, email);
@@ -11,10 +11,13 @@ export async function register42User(email: string, username: string) {
 }
 
 export async function changeUsername(id: number, newUsername: string) {
-    console.log("Controller -> Changing username for user ID:", id);
-    console.log("Controller -> New username:", newUsername);
     usernameChanger(id, newUsername);
     return { message: "Username changed successfully" };
+}
+
+export async function changeEmail(id: number, newEmail: string) {
+    emailChanger(id, newEmail);
+    return { message: "Email changed successfully" };
 }
 
 export async function getUserByUsername(username: string ) {
