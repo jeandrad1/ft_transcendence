@@ -1,23 +1,53 @@
-export function matchOnePlayerOne() {
+export function leftPlayerLoses(id: string) {
+    const currentPlayer = document.getElementById(id);
+    if (!currentPlayer)
+        return ;
 
+    const middleLines = currentPlayer.querySelectorAll('#middle-line-left');
+    middleLines.forEach(middleLine => {
+        (middleLine as HTMLElement).style.backgroundColor = "#fa4242";
+    });
+
+    const downLines = currentPlayer.querySelectorAll('#down-line-left');
+    downLines.forEach(downLine => {
+        (downLine as HTMLElement).style.backgroundColor = "#fa4242";
+    });
+
+    const leftPlayer = currentPlayer.querySelectorAll("#leftPlayer");
+    leftPlayer.forEach(player => {
+        (player as HTMLElement).style.borderColor = "#fa4242";
+    })
 }
 
-        <span id="middle-line" class="tournament-line-middle"></span>
-        <span id="middle-line-left" class="tournament-line-middle-left"></span>
-        <span id="middle-line-right" class="tournament-line-middle-right"></span>
-          <span id="down-line-left" class="tournament-line-down-left"></span>
-          <span id="up-line" class="tournament-line-up"></span>
-          <span id="down-line-right" class="tournament-line-down-right"></span>
+export function rightPlayerLoses(id: string) {
+    const currentPlayer = document.getElementById(id);
+    if (!currentPlayer)
+        return ;
 
-export function semifinalPlayerOneLoses() {
-    const middleLineLeft = document.getElementById("middle-line");
-    const downLineLeft = document.getElementById("down-line-left");
+    const middleLines = currentPlayer.querySelectorAll('#middle-line-right');
+    middleLines.forEach(middleLine => {
+        (middleLine as HTMLElement).style.backgroundColor = "#fa4242";
+    });
 
-    if (middleLineLeft) {
-        middleLineLeft.style.backgroundColor = "#fa4242";
-    }
+    const downLines = currentPlayer.querySelectorAll('#down-line-right');
+    downLines.forEach(downLine => {
+        (downLine as HTMLElement).style.backgroundColor = "#fa4242";
+    });
 
-    if (downLineLeft) {
-        downLineLeft.style.backgroundColor = "#fa4242";
-    }
+    const rightPlayer = currentPlayer.querySelectorAll("#rightPlayer");
+    rightPlayer.forEach(player => {
+        (player as HTMLElement).style.borderColor = "#fa4242";
+    })
 }
+
+const leftPlayerButton = document.getElementById("leftPlayer");
+
+leftPlayerButton?.addEventListener("click", () => {
+    leftPlayerLoses("#semifinal");
+})
+
+const rightPlayerButton = document.getElementById("rightPlayer");
+
+rightPlayerButton?.addEventListener("click", () => {
+    leftPlayerLoses("#semifinal");
+})
