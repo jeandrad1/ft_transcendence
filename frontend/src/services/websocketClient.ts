@@ -1,6 +1,8 @@
 // WebSocket client for real-time chat functionality
 import { getAccessToken } from '../state/authState';
 
+const apiHost = window.location.hostname;
+
 export interface ChatMessage {
     type: 'message' | 'user_connected' | 'user_disconnected' | 'typing' | 'stop_typing' | 'game_invitation';
     userId: number;
@@ -47,7 +49,7 @@ export class WebSocketClient {
                 return;
             }
 
-            const wsUrl = `ws://localhost:8080/ws?userId=${userId}&token=${encodeURIComponent(token)}`;
+            const wsUrl = `ws://${apiHost}:8080/ws?userId=${userId}&token=${encodeURIComponent(token)}`;
             
             console.log(`Connecting to WebSocket with authenticated token`);
             this.ws = new WebSocket(wsUrl);
