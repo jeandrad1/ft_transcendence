@@ -74,7 +74,7 @@ export function getConnectedUsers(): number[] {
 export function sendToUser(userId: number, message: WebSocketMessage): boolean {
     try {
         const connection = connectedUsers.get(userId);
-        if (connection && connection.websocket.readyState === WebSocket.OPEN) {
+        if (connection && connection.websocket.readyState === WebSocketState.OPEN) {
             connection.websocket.send(JSON.stringify(message));
             connection.lastActivity = new Date();
             return true;
@@ -357,7 +357,7 @@ export function cleanupStaleConnections(): void {
     
     connectedUsers.forEach((connection, userId) => {
         if (now - connection.lastActivity.getTime() > staleThreshold) {
-            if (connection.websocket.readyState !== WebSocket.OPEN) {
+            if (connection.websocket.readyState !== WebSocketState.OPEN) {
                 removeUserConnection(userId);
             }
         }
