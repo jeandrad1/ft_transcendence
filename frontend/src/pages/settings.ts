@@ -16,6 +16,7 @@ export function Settings() {
   return `
       <div class="settings-actions">
         <form id="settings-form">
+          <p id="avatar"></p>
           <div class="username-change">
             <p id="username"></p>
             <input type="text" id="newUsername" value="Enter a new Username" />
@@ -33,6 +34,7 @@ export function Settings() {
 }
 
 export function settingsHandlers(accessToken: string) {
+  const avatarField = document.querySelector<HTMLParagraphElement>("#avatar")!;
   const usernameField = document.querySelector<HTMLParagraphElement>("#username")!;
   const emailField = document.querySelector<HTMLParagraphElement>("#useremail")!;
   const newUsername = document.querySelector<HTMLInputElement>("#newUsername")!;
@@ -54,6 +56,22 @@ export function settingsHandlers(accessToken: string) {
       if (res.ok) {
         usernameField.textContent = `Username: ${data.user.username}`;
         emailField.textContent = `Email: ${data.user.email}`;
+        if (data.user.avatar) {
+          const avatarIMG = await fetch("http://localhost:8080/users/getAvatar", {
+            method: "GET",
+            headers: {
+              "User-ID": data.user.id.toString()
+            },
+          });
+        }
+        else{
+          const avatarIMG = await fetch("http://localhost:8080/users/getAvatar", {
+            method: "GET",
+            headers: {
+              "User-ID": "0"
+            }
+          });
+        }
       } else {
         console.error("Error fetching user data:", data);
       }

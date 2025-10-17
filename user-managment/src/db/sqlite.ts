@@ -7,7 +7,8 @@ db.prepare(`
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	username TEXT UNIQUE,
 	password TEXT,
-	email TEXT UNIQUE
+	email TEXT UNIQUE,
+	avatar INTEGER DEFAULT 0
 	)
 `).run();
 
