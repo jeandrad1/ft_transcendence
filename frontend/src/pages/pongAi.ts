@@ -197,6 +197,15 @@ function startGameVsAI() {
         if (state.gameEnded) {
             checkWinner();
         }
+        // Always send the latest gameState to the server so the AI can observe
+        // the game state even when the game is paused locally.
+        try {
+            if (socket && socket.connected) {
+                socket.emit("clientGameState", { roomId, state });
+            }
+        } catch (e) {
+            // ignore emission errors
+        }
     });
 
     // Pause the game when the tab becomes hidden to avoid timing issues.

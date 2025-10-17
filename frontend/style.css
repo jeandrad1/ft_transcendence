@@ -7,6 +7,7 @@ html, body {
   padding: 0;
   height: 100%;
   overflow-x: hidden;
+  background: linear-gradient(135deg, #0f2027, #21225A, #2c5364);
 }
 
 html {
@@ -1843,7 +1844,6 @@ header {
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: linear-gradient(135deg, #0f2027, #21225A, #2c5364);
   color: white;
   min-height: 80vh;
   font-family: "DM Sans", Arial, Helvetica, sans-serif;
