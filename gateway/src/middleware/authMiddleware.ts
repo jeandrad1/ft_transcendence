@@ -13,15 +13,24 @@ const publicUrls = [
     "/auth/42/callback",
     "/auth/google/login",
     "/auth/google/callback",
+    "/tournaments/local",
+    "/tournaments/:id/start",
 ];
 
 export async function authMiddleware(req: FastifyRequest, reply: FastifyReply) {
-    // Obtener la ruta sin parámetros de consulta
-    const urlPath = req.url.split('?')[0];
-    
-    // Permitir rutas públicas y WebSocket
-    if (publicUrls.includes(urlPath) || urlPath.startsWith('/ws')) {
-        return;
+    const urlPath = req.url.split("?")[0];
+
+    const isPublic = publicUrls.some((publicUrl) => {
+    if (publicUrl.includes(":")) {
+        // Turn `/tournaments/:id/start` into a regex like `/^\/tournaments\/[^/]+\/start$/`
+        const regex = new RegExp("^" + publicUrl.replace(/:[^/]+/g, "[^/]+") + "$");
+        return regex.test(urlPath);
+    }
+    return publicUrl === urlPath;
+    });
+
+    if (isPublic || urlPath.startsWith("/ws")) {
+    return;
     }
 
     const authHeader = req.headers["authorization"];
