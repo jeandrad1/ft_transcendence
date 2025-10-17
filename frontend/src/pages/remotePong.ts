@@ -60,11 +60,11 @@ export function remotePongPage(): string {
       </div>
       <div id="roleInfo"></div>
 
-      <div class="scoreboard-container">
-        <button id="startGameBtn" class="pong-button hidden">Start Game</button>
-        <div id="scoreboard" class="scoreboard">0 : 0</div>
-        <button id="playAgainBtn" class="pong-button hidden">Play Again</button>
-      </div>
+            <div class="scoreboard-container">
+                <button id="startGameBtn" class="pong-button hidden">Start Game</button>
+                <div id="scoreboard" class="scoreboard">0 : 0</div>
+                <button id="playAgainBtn" class="pong-button hidden">Play Again</button>
+            </div>
 
       <p id="winnerMessage" class="winner-message" style="display: none;"></p>
 
@@ -73,16 +73,17 @@ export function remotePongPage(): string {
           <p>Left Player: W / S</p>
         </div>
 
-        <canvas id="pongCanvas" width="800" height="600"></canvas>
+    <canvas id="pongCanvas" width="800" height="600"></canvas>
+    <div id="countdown" class="countdown hidden"></div>
 
         <div class="controls right-controls">
           <p>Right Player: ↑ / ↓</p>
         </div>
       </div>
 
-      <div id="extraInfo" class="extra-info">
-        <p>Press 'P' to Pause/Resume</p>
-      </div>
+            <div id="extraInfo" class="extra-info">
+                <p>Pause key disabled in remote matches</p>
+            </div>
     </div>
   `;
 }
@@ -133,11 +134,9 @@ async function postApiJson(path: string, data: any): Promise<Response> {
 
 const handleKeyDown = (e: KeyboardEvent) => {
     if (["ArrowUp", "ArrowDown", "w", "s"].includes(e.key)) e.preventDefault();
-    if (e.key.toLowerCase() === "p" && roomId) {
-        postApi(`/game/${roomId}/toggle-pause`);
-    } else {
-        keysPressed.add(e.key);
-    }
+    // Disable 'P' pause in remote pong view
+    if (e.key.toLowerCase() === "p") return;
+    keysPressed.add(e.key);
 };
 
 const handleKeyUp = (e: KeyboardEvent) => keysPressed.delete(e.key);
@@ -246,7 +245,13 @@ function startGame(roomIdToJoin: string) {
         document.getElementById("roleInfo")!.textContent = `Room ${data.roomId} is ready. Opponent found!`;
         postApi(`/game/${data.roomId}/init`);
         isGameRunning = false;
-        (document.getElementById("startGameBtn")!).classList.remove("hidden");
+        // Start 3-2-1 countdown then resume
+            // Use shared countdown util
+            import("../utils/countdown").then(mod => {
+                mod.runCountdown('countdown', 3).then(() => {
+                    postApi(`/game/${data.roomId}/resume`).catch(() => {});
+                });
+            });
     });
 
     socket.on("gameState", (state: GameState) => {
@@ -272,6 +277,24 @@ function startGame(roomIdToJoin: string) {
     window.addEventListener("keyup", handleKeyUp);
 
     gameLoop();
+}
+
+function startCountdownAndResume(roomToStart: string) {
+    const countdownEl = document.getElementById('countdown')!;
+    countdownEl.classList.remove('hidden');
+    let counter = 3;
+    countdownEl.textContent = String(counter);
+    const iv = setInterval(() => {
+        counter -= 1;
+        if (counter === 0) {
+            clearInterval(iv);
+            countdownEl.classList.add('hidden');
+            // resume game
+            postApi(`/game/${roomToStart}/resume`).catch(() => {});
+        } else {
+            countdownEl.textContent = String(counter);
+        }
+    }, 1000);
 }
 
 function checkWinner() {
