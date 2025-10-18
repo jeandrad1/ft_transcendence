@@ -15,7 +15,7 @@ export default async (fastify: FastifyInstance) => {
     fastify.post("/getUserByName", userGetterByUsername);
     fastify.post("/getUserById", userGetterById);
     fastify.post("/getUserByEmail", userGetterByEmail);
-    fastify.get("/getAvatar", avatarGetterController);
+    fastify.get("/getAvatar", avatarGetterController); // New route for getting user avatar
     fastify.get("/getResults", getResultsController);
     fastify.post("/addVictory", addVictoryController);
     fastify.post("/addDefeat", addDefeatController);

@@ -3,13 +3,13 @@
  * @brief Frontend logic for Online Pong game (Random and Rooms)
  */
 import { io, Socket } from "socket.io-client";
-import { getAccessToken, refreshAccessToken } from "../state/authState";
+import { getAccessToken, refreshAccessToken, getUserIdFromToken } from "../state/authState";
 
 let socket: Socket;
 let ctx: CanvasRenderingContext2D | null = null;
 let animationFrameId: number;
 let isGameRunning = false;
-let playerRole: "left" | "right" | "spectator" = "spectator";
+let playerRole: "left" | "right" | null = null;
 let roomId: string | null = null;
 
 const apiHost = `http://${window.location.hostname}:8080`;
@@ -52,16 +52,19 @@ export function remotePongPage(): string {
     <div class="pong-container">
       <h1>Pong - Remote Game</h1>
       <div id="modeSelection">
-        <button id="randomBtn" class="pong-button">Random Matchmaking</button>
-        <button id="roomBtn" class="pong-button">Create/Join Room</button>
+        <button id="createRoomBtn" class="pong-button">Create Room</button>
+        <div class="join-room-container">
+          <input type="text" id="roomIdInput" placeholder="Enter Room ID">
+          <button id="joinRoomBtn" class="pong-button">Join Room</button>
+        </div>
       </div>
       <div id="roleInfo"></div>
 
-      <div class="scoreboard-container">
-        <button id="startGameBtn" class="pong-button hidden">Start Game</button>
-        <div id="scoreboard" class="scoreboard">0 : 0</div>
-        <button id="playAgainBtn" class="pong-button hidden">Play Again</button>
-      </div>
+            <div class="scoreboard-container">
+                <button id="startGameBtn" class="pong-button hidden">Start Game</button>
+                <div id="scoreboard" class="scoreboard">0 : 0</div>
+                <button id="playAgainBtn" class="pong-button hidden">Play Again</button>
+            </div>
 
       <p id="winnerMessage" class="winner-message" style="display: none;"></p>
 
@@ -70,16 +73,17 @@ export function remotePongPage(): string {
           <p>Left Player: W / S</p>
         </div>
 
-        <canvas id="pongCanvas" width="800" height="600"></canvas>
+    <canvas id="pongCanvas" width="800" height="600"></canvas>
+    <div id="countdown" class="countdown hidden"></div>
 
         <div class="controls right-controls">
           <p>Right Player: ↑ / ↓</p>
         </div>
       </div>
 
-      <div id="extraInfo" class="extra-info">
-        <p>Press 'P' to Pause/Resume</p>
-      </div>
+            <div id="extraInfo" class="extra-info">
+                <p>Pause key disabled in remote matches</p>
+            </div>
     </div>
   `;
 }
@@ -93,12 +97,30 @@ function cleanup() {
 }
 
 // Helper: POST with Authorization header and retry after refresh on 401
-async function postGame(path: string): Promise<Response> {
+async function postApi(path: string, method: "POST" | "GET" = "POST"): Promise<Response> {
     const makeReq = async () => {
         const token = getAccessToken();
         const headers: Record<string, string> = {};
         if (token) headers["Authorization"] = `Bearer ${token}`;
-        return fetch(`${apiHost}${path}`, { method: "POST", headers });
+        return fetch(`${apiHost}${path}`, { method, headers });
+    };
+    let res = await makeReq();
+    if (res.status === 401) {
+        const refreshed = await refreshAccessToken();
+        if (refreshed) {
+            res = await makeReq();
+        }
+    }
+    return res;
+}
+
+// Helper: POST JSON body with Authorization header and retry after refresh on 401
+async function postApiJson(path: string, data: any): Promise<Response> {
+    const makeReq = async () => {
+        const token = getAccessToken();
+        const headers: Record<string, string> = { "Content-Type": "application/json" };
+        if (token) headers["Authorization"] = `Bearer ${token}`;
+        return fetch(`${apiHost}${path}`, { method: "POST", headers, body: JSON.stringify(data) });
     };
     let res = await makeReq();
     if (res.status === 401) {
@@ -112,17 +134,15 @@ async function postGame(path: string): Promise<Response> {
 
 const handleKeyDown = (e: KeyboardEvent) => {
     if (["ArrowUp", "ArrowDown", "w", "s"].includes(e.key)) e.preventDefault();
-    if (e.key.toLowerCase() === "p" && roomId) {
-        postGame(`/game/${roomId}/toggle-pause`);
-    } else {
-        keysPressed.add(e.key);
-    }
+    // Disable 'P' pause in remote pong view
+    if (e.key.toLowerCase() === "p") return;
+    keysPressed.add(e.key);
 };
 
 const handleKeyUp = (e: KeyboardEvent) => keysPressed.delete(e.key);
 
 function gameLoop() {
-    if (socket && isGameRunning && roomId && playerRole !== "spectator") {
+    if (socket && isGameRunning && roomId && playerRole) {
         if (keysPressed.has("w") || keysPressed.has("ArrowUp"))
             socket.emit("moveUp", playerRole, roomId);
         if (keysPressed.has("s") || keysPressed.has("ArrowDown"))
@@ -135,27 +155,44 @@ export function remotePongHandlers() {
     cleanup();
     ctx = (document.getElementById("pongCanvas") as HTMLCanvasElement).getContext("2d")!;
     
-    document.getElementById("randomBtn")!.addEventListener("click", () => {
-        prepareGameUI();
-        startGame();
+    document.getElementById("createRoomBtn")!.addEventListener("click", async () => {
+        try {
+            // new endpoint for remote rooms
+            const response = await postApi("/game/remote-rooms");
+            if (!response.ok) throw new Error("Failed to create room");
+            const { roomId: newRoomId } = await response.json();
+            roomId = newRoomId;
+            prepareGameUI();
+            startGame(newRoomId);
+        } catch (error) {
+            console.error("Error creating room:", error);
+            alert("Could not create room. Please try again.");
+        }
     });
 
-    document.getElementById("roomBtn")!.addEventListener("click", () => {
-        alert("Create/Join Room is not implemented yet.");
+    document.getElementById("joinRoomBtn")!.addEventListener("click", () => {
+        const input = document.getElementById("roomIdInput") as HTMLInputElement;
+        const roomIdToJoin = input.value.trim();
+        if (roomIdToJoin) {
+            roomId = roomIdToJoin;
+            prepareGameUI();
+            startGame(roomIdToJoin);
+        } else {
+            alert("Please enter a Room ID.");
+        }
     });
 
     document.getElementById("startGameBtn")!.addEventListener("click", () => {
         if (!roomId) return;
-        postGame(`/game/${roomId}/resume`);
+        postApi(`/game/${roomId}/resume`);
         (document.getElementById("startGameBtn")!).classList.add("hidden");
-        // Do NOT set isGameRunning here. Wait for server 'gamePaused' event with paused=false.
     });
 
     document.getElementById("playAgainBtn")!.addEventListener("click", () => {
         if (!roomId) return;
         document.getElementById("winnerMessage")!.style.display = "none";
         document.getElementById("playAgainBtn")!.classList.add("hidden");
-        postGame(`/game/${roomId}/init`).then(() => {
+        postApi(`/game/${roomId}/init`).then(() => {
             (document.getElementById("startGameBtn")!).classList.remove("hidden");
         });
         isGameRunning = false;
@@ -166,48 +203,55 @@ function prepareGameUI() {
     (document.getElementById("modeSelection")!).style.display = "none";
     (document.getElementById("pongCanvas")!).style.display = "block";
     (document.getElementById("gameInfo")!).style.display = "flex";
+    (document.getElementById("winnerMessage")!).style.display = "none";
+    (document.getElementById("playAgainBtn")!).classList.add("hidden");
 }
 
-function startGame() {
+function startGame(roomIdToJoin: string) {
     const wsHost = `ws://${window.location.hostname}:7000`;
     socket = io(wsHost);
 
-    document.getElementById("roleInfo")!.textContent = "Waiting for an opponent...";
-    // Wait for the socket to be connected before emitting joinRoom
+    document.getElementById("roleInfo")!.textContent = `Joining room ${roomIdToJoin}...`;
+    
     socket.on('connect', () => {
-        socket.emit("joinRoom");
+        socket.emit("joinRoom", { roomId: roomIdToJoin });
     });
 
     socket.on("roomJoined", (data: { roomId: string, role: "left" | "right" }) => {
         roomId = data.roomId;
-        // If the server returns no valid role, treat as spectator
-        playerRole = (data && (data as any).role) ? (data as any).role : "spectator";
+        playerRole = data.role;
 
         const roleInfo = document.getElementById("roleInfo")!;
-        if (playerRole === 'spectator') {
-            roleInfo.textContent = `You are a spectator in room ${roomId}. Waiting for players...`;
-            // hide start button for spectators
-            (document.getElementById("startGameBtn")!).classList.add("hidden");
-        } else {
-            roleInfo.textContent = `You are: ${playerRole} in room ${roomId}. Waiting for opponent...`;
-        }
+        roleInfo.textContent = `You are: ${playerRole} in room ${roomId}. Waiting for opponent...`;
     });
 
-    socket.on('roomFull', (payload: { roomId: string }) => {
-        alert('Room is full. Try again later.');
-        console.warn('Attempted to join full room', payload);
+    socket.on('roomFull', (payload: { roomId:string }) => {
+        alert(`Room ${payload.roomId} is full. Try another room or create a new one.`);
+        // Optionally, reset the UI
+        (document.getElementById("modeSelection")!).style.display = "block";
+        (document.getElementById("gameInfo")!).style.display = "none";
+        cleanup();
+    });
+
+    socket.on('roomNotFound', (payload: { roomId: string }) => {
+        alert(`Room ${payload.roomId} not found. Please check the ID and try again.`);
+        // Optionally, reset the UI
+        (document.getElementById("modeSelection")!).style.display = "block";
+        (document.getElementById("gameInfo")!).style.display = "none";
+        cleanup();
     });
 
     socket.on("gameReady", (data: { roomId: string }) => {
         document.getElementById("roleInfo")!.textContent = `Room ${data.roomId} is ready. Opponent found!`;
-        postGame(`/game/${data.roomId}/init`);
+        postApi(`/game/${data.roomId}/init`);
         isGameRunning = false;
-        // Only show start button to actual players
-        if (playerRole === 'left' || playerRole === 'right') {
-            (document.getElementById("startGameBtn")!).classList.remove("hidden");
-        } else {
-            (document.getElementById("startGameBtn")!).classList.add("hidden");
-        }
+        // Start 3-2-1 countdown then resume
+            // Use shared countdown util
+            import("../utils/countdown").then(mod => {
+                mod.runCountdown('countdown', 3).then(() => {
+                    postApi(`/game/${data.roomId}/resume`).catch(() => {});
+                });
+            });
     });
 
     socket.on("gameState", (state: GameState) => {
@@ -235,6 +279,24 @@ function startGame() {
     gameLoop();
 }
 
+function startCountdownAndResume(roomToStart: string) {
+    const countdownEl = document.getElementById('countdown')!;
+    countdownEl.classList.remove('hidden');
+    let counter = 3;
+    countdownEl.textContent = String(counter);
+    const iv = setInterval(() => {
+        counter -= 1;
+        if (counter === 0) {
+            clearInterval(iv);
+            countdownEl.classList.add('hidden');
+            // resume game
+            postApi(`/game/${roomToStart}/resume`).catch(() => {});
+        } else {
+            countdownEl.textContent = String(counter);
+        }
+    }, 1000);
+}
+
 function checkWinner() {
     if (!gameState.gameEnded || !isGameRunning) return;
 
@@ -243,7 +305,43 @@ function checkWinner() {
     winnerMsg.textContent = (playerRole === winner) ? "You Win!" : "You Lose!";
     
     winnerMsg.style.display = "block";
+    // If the local player won, send a victory to the user-management service
+    const winnerSide = winner;
+    if (playerRole === winnerSide) {
+        sendVictoryToUserManagement().catch(err => console.error('Failed to send victory:', err));
+    }
     endGame();
+}
+
+async function sendVictoryToUserManagement() {
+    try {
+        // Prefer extracting user id from the access token (more reliable), fallback to localStorage
+        let userId = getUserIdFromToken();
+        if (!userId) {
+            const userStr = localStorage.getItem("user");
+            if (!userStr) {
+                console.warn("No user id available (token/localStorage); cannot send victory.");
+                return;
+            }
+            const user = JSON.parse(userStr);
+            userId = user?.id ?? user?.userId ?? null;
+        }
+        if (!userId) {
+            console.warn("Unable to resolve userId for victory.");
+            return;
+        }
+
+        // Gateway exposes user-management under /users (proxied to user-management service)
+        const res = await postApiJson(`/users/addVictory`, { userId });
+        if (!res.ok) {
+            const text = await res.text();
+            console.error("Failed to post victory:", res.status, text);
+        } else {
+            console.log(`Victory recorded for user ${userId}`);
+        }
+    } catch (err) {
+        console.error("Error sending victory:", err);
+    }
 }
 
 function endGame() {

@@ -1,6 +1,7 @@
 import bcrypt from "bcrypt";
 import { FastifyReply, FastifyRequest } from "fastify";
-import { registerUser, register42User, changeUsername , changeEmail , getUserByUsername, getUserById, getUserByEmail } from "../services/usersService";
+import { registerUser, register42User, changeUsername , changeEmail , getUserByUsername, getUserById, getUserByEmail, 
+	getUserAvatar } from "../services/usersService";
 
 export async function registerController(req: FastifyRequest, reply: FastifyReply) {
 	const { email, username, password } = req.body as { email: string; username: string; password: string };
@@ -129,6 +130,27 @@ export async function userGetterById(req: FastifyRequest, reply: FastifyReply) {
 			email: user.email
 		});
 	} catch (err: any) {
+		return reply.code(400).send({ error: err.message });
+	}
+}
+
+export async function avatarGetterController(req: FastifyRequest, reply: FastifyReply) {
+	const userId = req.headers["x-user-id"];
+
+	console.log("Fetching avatar for user ID:", userId);
+	if (!userId) {
+		return reply.code(401).send({ error: "Not authenticated" });
+	}
+
+	try {
+		const avatar = await getUserAvatar(userId);
+		return (
+			reply
+				.type("image/jpeg")
+				.send( avatar )
+		);
+	} catch (err: any) {
+		console.error("Error occurred during avatar retrieval");
 		return reply.code(400).send({ error: err.message });
 	}
 }

@@ -56,22 +56,14 @@ export function settingsHandlers(accessToken: string) {
       if (res.ok) {
         usernameField.textContent = `Username: ${data.user.username}`;
         emailField.textContent = `Email: ${data.user.email}`;
-        if (data.user.avatar) {
-          const avatarIMG = await fetch("http://localhost:8080/users/getAvatar", {
-            method: "GET",
-            headers: {
-              "User-ID": data.user.id.toString()
-            },
-          });
-        }
-        else{
-          const avatarIMG = await fetch("http://localhost:8080/users/getAvatar", {
-            method: "GET",
-            headers: {
-              "User-ID": "0"
-            }
-          });
-        }
+        const avatarIMG = await fetch("http://localhost:8080/users/getAvatar", {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+        console.log("Avatar fetched:", avatarIMG);
+        avatarField.innerHTML = `<img src="${URL.createObjectURL(await avatarIMG.blob())}" alt="User Avatar" width="100" height="100"/>`;
       } else {
         console.error("Error fetching user data:", data);
       }
@@ -81,36 +73,6 @@ export function settingsHandlers(accessToken: string) {
   }
 
   fetchUserData();
-
-  // -> TEMPORALMENTE <-
-
-  // Función para obtener todos los usuarios
-  async function fetchAllUsers() {
-    try {
-      const res = await fetch("http://localhost:8080/users/getAllUsers", {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-      const data = await res.json();
-      if (res.ok) {
-        // Formatear la lista de usuarios como "ID - Username"
-        const usersList = data.users.map((user: any) => `${user.id} - ${user.username}`).join('\n');
-        allUsersField.textContent = usersList;
-      } else {
-        console.error("Error fetching all users:", data);
-        allUsersField.textContent = "Error loading users";
-      }
-    } catch (err) {
-      console.error("⚠️ Failed to reach server", err);
-      allUsersField.textContent = "Failed to load users";
-    }
-  }
-
-  fetchAllUsers();
-
-  // -> FINAL TEMPORALMENTE <-
 
   // Listener para cambiar username
   changeUsernameBtn.addEventListener("click", async (e) => {
