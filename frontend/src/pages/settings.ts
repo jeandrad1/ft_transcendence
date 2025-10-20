@@ -60,6 +60,7 @@ export function settingsHandlers(accessToken: string) {
           method: "GET",
           headers: {
             Authorization: `Bearer ${accessToken}`,
+            "x-user-id": data.user.id.toString(),
           },
         });
         console.log("Avatar fetched:", avatarIMG);

@@ -78,9 +78,7 @@ export async function emailChanger(req: FastifyRequest, reply: FastifyReply) {
 		const existingUser = await getUserByEmail(newEmail);
 		if (existingUser) {
 			return reply.code(400).send({ error: "Email already exists" });
-		}
-		console.log("Controller -> Changing email for user ID:", userId);
-		console.log("Controller -> New email:", newEmail);
+		};
 		const result = await changeEmail(userId, newEmail);
 		return reply.send({ result });
 	} catch (err: any) {
@@ -139,7 +137,7 @@ export async function avatarGetterController(req: FastifyRequest, reply: Fastify
 
 	console.log("Fetching avatar for user ID:", userId);
 	if (!userId) {
-		return reply.code(401).send({ error: "Not authenticated" });
+		return reply.code(401).send({ error: "No ID" });
 	}
 
 	try {
@@ -169,7 +167,6 @@ export async function passwordControl(req: FastifyRequest, reply: FastifyReply) 
 	} catch (err: any) {
 		return reply.code(400).send({ error: err.message });
 	}
-	//delete this line
 }
 
 export async function getCurrentUserController(req: FastifyRequest, reply: FastifyReply) {

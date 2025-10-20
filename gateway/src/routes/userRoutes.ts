@@ -4,15 +4,32 @@ import { authMiddleware } from "../middleware/authMiddleware";
 
 export default async function userRoutes(app: FastifyInstance) {
   app.register(async function (protectedRoutes: FastifyInstance) {
-    // Step 1: Keep your authMiddleware here
-    protectedRoutes.addHook("preHandler", authMiddleware);
-
-    // Step 2: Register the proxy and inject headers before forwarding
     protectedRoutes.register(fastifyHttpProxy, {
       upstream: "http://user-management-service:8082",
       prefix: "/users",
       rewritePrefix: "",
       async preHandler(req, reply) {
+
+        const publicPaths = [
+          "/users/getAvatar"
+        ];
+
+        const isPublic = publicPaths.some((path) => req.url.startsWith(path));
+
+        console.log("path:", req.url, "isPublic:", isPublic);
+
+        if (isPublic) {
+          const userId = req.headers["x-user-id"];
+          if (!userId) {
+            console.warn(`Public route accessed without x-user-id header: ${req.url}`);
+            return reply.code(401).send({ error: "Missing x-user-id header" });
+          }
+          console.log("Public route allowed. Skipping auth.");
+          return;
+        }
+
+        await authMiddleware(req, reply);
+
         if (req.user) {
           (req.headers as Record<string, string>)["x-user-id"] = req.user.id;
           (req.headers as Record<string, string>)["x-username"] = req.user.username;
