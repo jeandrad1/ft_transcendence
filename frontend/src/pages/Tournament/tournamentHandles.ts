@@ -60,6 +60,7 @@ async function startLocalTournamentFlow(tournamentData: any) {
 
     const playNextMatch = async () => {
         if (currentMatchIndex >= matches.length) {
+            delete (window as any)._isTournamentMatch;
             alert("All matches done!");
             console.log("Winners:", winners);
             return;

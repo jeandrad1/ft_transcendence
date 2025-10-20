@@ -129,19 +129,17 @@ function endGame() {
     isGameRunning = false;
     cancelAnimationFrame(animationFrameId);
 
-    endGameTimeoutId = window.setTimeout(() => {
-        // Don't call cleanup() here, as it will interfere with a new game
-        // if started within the 5-second window.
-        // cleanup() is called at the beginning of startGame().
-        
-        // Reset UI to initial state
-        (document.getElementById("modeSelection")!).style.display = "flex";
-        (document.getElementById("gameInfo")!).style.display = "none";
-        (document.getElementById("winnerMessage")!).style.display = "none";
-        (document.getElementById("scoreboard")!).classList.add("hidden");
-        (document.getElementById("extraInfo")!).classList.add("hidden");
-        (document.getElementById("roleInfo")!).textContent = "";
-    }, 5000);
+    // only reboot the ui if we are not in tournamnet
+    if (!(window as any)._tournamentMatchId && !(window as any)._isTournamentMatch) {
+        endGameTimeoutId = window.setTimeout(() => {
+            (document.getElementById("modeSelection")!).style.display = "flex";
+            (document.getElementById("gameInfo")!).style.display = "none";
+            (document.getElementById("winnerMessage")!).style.display = "none";
+            (document.getElementById("scoreboard")!).classList.add("hidden");
+            (document.getElementById("extraInfo")!).classList.add("hidden");
+            (document.getElementById("roleInfo")!).textContent = "";
+        }, 5000);
+    }
 }
 
 function checkWinner() {
@@ -174,7 +172,6 @@ function checkWinner() {
             (window as any).onMatchFinished(winner);
         }
     }
-
     endGame();
 }
 
@@ -184,16 +181,18 @@ export async function playTournamentMatch(match: {
     player2: string;
     onFinish: (winner: string) => void;
 }) {
-    prepareGameUI(false);
-    await startTournamentGame(false, match.player1, match.player2);
-
-    const checkWinnerOrig = checkWinner;
+    // global flag for tournament
+    (window as any)._isTournamentMatch = true;
     (window as any)._tournamentMatchId = match.id;
-
     (window as any).onMatchFinished = (winnerName: string) => {
         console.log(`[Tournament] Match ${match.id} finished. Winner: ${winnerName}`);
+        // clan only flags from matches not tournamnet
+        delete (window as any)._tournamentMatchId;
+        delete (window as any).onMatchFinished;
         match.onFinish(winnerName);
     }
+    prepareGameUI(false);
+    await startTournamentGame(false, match.player1, match.player2);
 }
 
 async function startTournamentGame(isAiMode: boolean, playerLeft: string, playerRight: string) {
