@@ -11,10 +11,14 @@ import { localPongPage, localPongHandlers } from "./pages/localPong"; // Importa
 import { localPowerUpPongPage, localPowerUpPongHandlers } from "./pages/localPowerUpPong"; // PowerUp mode
 import { remotePongPage, remotePongHandlers } from "./pages/remotePong"; // Importar handlers
 import { Game } from "./pages/game"
+import { Profile, profileHandlers } from "./pages/profile";
 import { Tournament } from "./pages/Tournament/tournament";
 
 export function router(route: string): string {
     switch (route) {
+        case "#/profile":
+            setTimeout(profileHandlers, 0);
+            return Profile();
         case "#/about":
             return About();
         case "#/register":

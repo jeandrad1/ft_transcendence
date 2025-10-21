@@ -56,22 +56,6 @@ export function settingsHandlers(accessToken: string) {
       if (res.ok) {
         usernameField.textContent = `Username: ${data.user.username}`;
         emailField.textContent = `Email: ${data.user.email}`;
-        if (data.user.avatar) {
-          const avatarIMG = await fetch("http://localhost:8080/users/getAvatar", {
-            method: "GET",
-            headers: {
-              "User-ID": data.user.id.toString()
-            },
-          });
-        }
-        else{
-          const avatarIMG = await fetch("http://localhost:8080/users/getAvatar", {
-            method: "GET",
-            headers: {
-              "User-ID": "0"
-            }
-          });
-        }
       } else {
         console.error("Error fetching user data:", data);
       }
