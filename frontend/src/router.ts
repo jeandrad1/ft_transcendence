@@ -13,7 +13,8 @@ import { Game } from "./pages/game"
 import { Profile, profileHandlers } from "./pages/profile";
 
 export function router(route: string): string {
-    switch (route) {
+    const cleanRoute = route.split('?')[0];
+    switch (cleanRoute) {
         case "#/profile":
             setTimeout(profileHandlers, 0);
             return Profile();
@@ -34,10 +35,10 @@ export function router(route: string): string {
             setTimeout(chatHandlers, 0);
             return Chat();
         case "#/pong/local":
-            setTimeout(localPongHandlers, 0); // Añadir llamada a handlers
+            setTimeout(localPongHandlers, 0);
             return localPongPage();
         case "#/pong/remote":
-            setTimeout(remotePongHandlers, 0); // Añadir llamada a handlers
+            setTimeout(remotePongHandlers, 0);
             return remotePongPage();
         case "#/settings":
             return Settings();

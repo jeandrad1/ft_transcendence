@@ -401,6 +401,7 @@ export function chatHandlers() {
                     const conversationItem = document.querySelector(`[data-user-id="${conv.otherUserId}"] .conversation-name`);
                     if (conversationItem) {
                         conversationItem.textContent = username;
+                        conversationItem.setAttribute('data-username', username);
                     }
                     
                     // Update avatar with first letter of username
@@ -420,13 +421,19 @@ export function chatHandlers() {
                             item.classList.add('active');
                         }
                         
-                        item.addEventListener('click', async () => {
-                            // Get the real username (in case it's still loading)
-                            const userName = await getUsername(userId);
-                            // Visual highlight of the active conversation
-                            document.querySelectorAll('.conversation-item').forEach(i => i.classList.remove('active'));
-                            item.classList.add('active');
-                            selectConversation(userId, userName);
+                        item.addEventListener('click', async (e) => {
+                            const target = e.target as HTMLElement;
+                            const username = target.getAttribute('data-username') || await getUsername(userId);
+                            
+                            if (target.classList.contains('conversation-name')) {
+                                // Navigate to profile
+                                window.location.hash = `#/profile?username=${username}`;
+                            } else {
+                                // Select conversation
+                                document.querySelectorAll('.conversation-item').forEach(i => i.classList.remove('active'));
+                                item.classList.add('active');
+                                selectConversation(userId, username);
+                            }
                         });
                     });
                 }, CHAT_CONFIG.USERNAME_LOADING_DELAY);
