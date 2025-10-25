@@ -12,6 +12,8 @@ let isGameRunning = false;
 let playerRole: "left" | "right" | null = null;
 let roomId: string | null = null;
 let isRoomCreator = false;
+let gameInitialized = false;
+let isTournamentMode = false; // Flag to indicate if this is a tournament game
 
 const apiHost = `http://${window.location.hostname}:8080`;
 
@@ -56,7 +58,8 @@ export function remotePongPage(): string {
     return `
     <div class="pong-container">
       <h1>Pong - Remote Game</h1>
-            <div id="modeSelection">
+            <div id="pong-lobby">
+                <h2>🏓 Pong Matchmaking Lobby</h2>
                 <div class="speed-controls">
                     <label>Difficulty:
                         <select id="difficultySelect">
@@ -74,10 +77,13 @@ export function remotePongPage(): string {
                         </select>
                     </label>
                 </div>
-                <button id="createRoomBtn" class="pong-button">Create Room</button>
-                <div class="join-room-container">
-                    <input type="text" id="roomIdInput" placeholder="Enter Room ID">
-                    <button id="joinRoomBtn" class="pong-button">Join Room</button>
+                <div class="lobby-players">
+                    <h3>Joined Players</h3>
+                    <ul id="player-list"></ul>
+                </div>
+                <div class="lobby-actions">
+                    <button id="join-matchmaking-btn" class="lobby-button">Join Matchmaking</button>
+                    <button id="leave-matchmaking-btn" class="lobby-button">Leave</button>
                 </div>
             </div>
       <div id="roleInfo"></div>
@@ -117,6 +123,8 @@ function cleanup() {
     window.removeEventListener("keyup", handleKeyUp);
     isGameRunning = false;
     isRoomCreator = false;
+    gameInitialized = false;
+    isTournamentMode = false;
 }
 
 // Helper: POST with Authorization header and retry after refresh on 401
@@ -191,39 +199,43 @@ export function remotePongHandlers() {
     }
     if (autoRoomId) {
         roomId = autoRoomId;
+        isTournamentMode = true; // This is a tournament game
         prepareGameUI();
         startGame(autoRoomId);
     }
 
-    document.getElementById("createRoomBtn")!.addEventListener("click", async () => {
-        try {
-            // new endpoint for remote rooms
-            const response = await postApi("/game/remote-rooms");
-            if (!response.ok) throw new Error("Failed to create room");
-            const { roomId: newRoomId } = await response.json();
-            roomId = newRoomId;
-            isRoomCreator = true;
-            // Options will be applied after init when the room becomes ready
-            prepareGameUI();
-            startGame(newRoomId);
-        } catch (error) {
-            console.error("Error creating room:", error);
-            alert("Could not create room. Please try again.");
-        }
-    });
+    // Only add lobby event listeners if not in tournament mode
+    if (!isTournamentMode) {
+        document.getElementById("createRoomBtn")!.addEventListener("click", async () => {
+            try {
+                // new endpoint for remote rooms
+                const response = await postApi("/game/remote-rooms");
+                if (!response.ok) throw new Error("Failed to create room");
+                const { roomId: newRoomId } = await response.json();
+                roomId = newRoomId;
+                isRoomCreator = true;
+                // Options will be applied after init when the room becomes ready
+                prepareGameUI();
+                startGame(newRoomId);
+            } catch (error) {
+                console.error("Error creating room:", error);
+                alert("Could not create room. Please try again.");
+            }
+        });
 
-    document.getElementById("joinRoomBtn")!.addEventListener("click", () => {
-        const input = document.getElementById("roomIdInput") as HTMLInputElement;
-        const roomIdToJoin = input.value.trim();
-        if (roomIdToJoin) {
-            roomId = roomIdToJoin;
-            isRoomCreator = false;
-            prepareGameUI();
-            startGame(roomIdToJoin);
-        } else {
-            alert("Please enter a Room ID.");
-        }
-    });
+        document.getElementById("joinRoomBtn")!.addEventListener("click", () => {
+            const input = document.getElementById("roomIdInput") as HTMLInputElement;
+            const roomIdToJoin = input.value.trim();
+            if (roomIdToJoin) {
+                roomId = roomIdToJoin;
+                isRoomCreator = false;
+                prepareGameUI();
+                startGame(roomIdToJoin);
+            } else {
+                alert("Please enter a Room ID.");
+            }
+        });
+    }
 
     document.getElementById("startGameBtn")!.addEventListener("click", () => {
         if (!roomId) return;
@@ -243,11 +255,19 @@ export function remotePongHandlers() {
 }
 
 function prepareGameUI() {
-    (document.getElementById("modeSelection")!).style.display = "none";
+    (document.getElementById("pong-lobby")!).style.display = "none";
     (document.getElementById("pongCanvas")!).style.display = "block";
     (document.getElementById("gameInfo")!).style.display = "flex";
     (document.getElementById("winnerMessage")!).style.display = "none";
     (document.getElementById("playAgainBtn")!).classList.add("hidden");
+    
+    // In tournament mode, hide the start button since game starts automatically
+    const startBtn = document.getElementById("startGameBtn")!;
+    if (isTournamentMode) {
+        startBtn.classList.add("hidden");
+    } else {
+        startBtn.classList.add("hidden"); // Will be shown after init for manual games
+    }
 }
 
 function startGame(roomIdToJoin: string) {
@@ -266,12 +286,13 @@ function startGame(roomIdToJoin: string) {
 
         const roleInfo = document.getElementById("roleInfo")!;
         roleInfo.textContent = `You are: ${playerRole} in room ${roomId}. Waiting for opponent...`;
+        window.history.replaceState(null, '', `#/remote-pong?room=${data.roomId}`);
     });
 
     socket.on('roomFull', (payload: { roomId:string }) => {
         alert(`Room ${payload.roomId} is full. Try another room or create a new one.`);
         // Optionally, reset the UI
-        (document.getElementById("modeSelection")!).style.display = "block";
+        (document.getElementById("pong-lobby")!).style.display = "block";
         (document.getElementById("gameInfo")!).style.display = "none";
         cleanup();
     });
@@ -279,41 +300,55 @@ function startGame(roomIdToJoin: string) {
     socket.on('roomNotFound', (payload: { roomId: string }) => {
         alert(`Room ${payload.roomId} not found. Please check the ID and try again.`);
         // Optionally, reset the UI
-        (document.getElementById("modeSelection")!).style.display = "block";
+        (document.getElementById("pong-lobby")!).style.display = "block";
         (document.getElementById("gameInfo")!).style.display = "none";
         cleanup();
     });
 
     socket.on("gameReady", (data: { roomId: string }) => {
         document.getElementById("roleInfo")!.textContent = `Room ${data.roomId} is ready. Opponent found!`;
-        // Initialize the game state on the server and then apply custom options
-        postApi(`/game/${data.roomId}/init`).then(async () => {
-            // Only the player who created the room may apply the difficulty/length settings
-            if (isRoomCreator) {
-                try {
-                    const difficulty = (document.getElementById('difficultySelect') as HTMLSelectElement)?.value;
-                    const gameLength = (document.getElementById('gameLengthSelect') as HTMLSelectElement)?.value;
-                    const body: any = {};
-                    if (difficulty && difficulty.trim() !== '') body.difficulty = difficulty;
-                    if (gameLength && gameLength.trim() !== '') body.gameLength = gameLength;
-                    if (Object.keys(body).length > 0) {
-                        console.log('[RemotePong] Applying room options', body);
-                        const resp = await postApiJson(`/game/${data.roomId}/speeds`, body);
-                        console.log('[RemotePong] Speeds POST status', resp.status);
+        
+        // Only initialize the game once per room to avoid conflicts
+        if (!gameInitialized) {
+            gameInitialized = true;
+            // Initialize the game state on the server and then apply custom options
+            postApi(`/game/${data.roomId}/init`).then(async () => {
+                // Only the player who created the room may apply the difficulty/length settings
+                if (isRoomCreator) {
+                    try {
+                        const difficulty = (document.getElementById('difficultySelect') as HTMLSelectElement)?.value;
+                        const gameLength = (document.getElementById('gameLengthSelect') as HTMLSelectElement)?.value;
+                        const body: any = {};
+                        if (difficulty && difficulty.trim() !== '') body.difficulty = difficulty;
+                        if (gameLength && gameLength.trim() !== '') body.gameLength = gameLength;
+                        if (Object.keys(body).length > 0) {
+                            console.log('[RemotePong] Applying room options', body);
+                            const resp = await postApiJson(`/game/${data.roomId}/speeds`, body);
+                            console.log('[RemotePong] Speeds POST status', resp.status);
+                        }
+                    } catch (e) {
+                        console.warn('Failed to apply room options for', data.roomId, e);
                     }
-                } catch (e) {
-                    console.warn('Failed to apply room options for', data.roomId, e);
                 }
-            }
 
-            isGameRunning = false;
-            // Start 3-2-1 countdown then resume
-            import("../utils/countdown").then(mod => {
-                mod.runCountdown('countdown', 3).then(() => {
-                    postApi(`/game/${data.roomId}/resume`).catch(() => {});
-                });
+                isGameRunning = false;
+                
+                // In tournament mode, start the game automatically
+                if (isTournamentMode) {
+                    // Small delay to ensure both players are ready
+                    setTimeout(() => {
+                        postApi(`/game/${data.roomId}/resume`);
+                    }, 500);
+                } else {
+                    // Don't start countdown here, wait for server "gameStarting" event
+                    // The resume will be called after init, and server will emit gameStarting
+                }
             });
-        });
+        } else {
+            // For the second player, just wait for the game to start
+            isGameRunning = false;
+            // The countdown will be triggered by the server events
+        }
     });
 
     socket.on("gameState", (state: GameState) => {
@@ -326,6 +361,15 @@ function startGame(roomIdToJoin: string) {
 
     socket.on("gamePaused", ({ paused }: { paused: boolean }) => {
         isGameRunning = !paused;
+    });
+
+    socket.on("gameStarting", () => {
+        // Start countdown for all players when game is about to start
+        import("../utils/countdown").then(mod => {
+            mod.runCountdown('countdown', 1).then(() => {
+                // Game will start automatically after countdown
+            });
+        });
     });
 
     socket.on("opponentDisconnected", () => {

@@ -1,6 +1,7 @@
 import type { FastifyRequest, FastifyReply } from "fastify"
 import * as TournamentService from "../services/tournamentService";
 import { PlayerRepository } from "../repositories/playerRepository";
+import { TournamentRepository } from "../repositories/tournamentRepository";
 
 export async function getTournamentsController(req: FastifyRequest, reply: FastifyReply) {
     try {
@@ -192,5 +193,39 @@ export async function getTournamentPlayersController(req: FastifyRequest, reply:
     } catch (error) {
         console.error("Error fetching tournament players:", error);
         return reply.status(500).send({ error: "Internal server error" });
+    }
+}
+
+export async function getTournamentMatchesWithRoomsController(req: FastifyRequest, reply: FastifyReply) {
+    try {
+        const { id } = req.params as { id: string };
+        const matches = await TournamentService.getTournamentMatchesWithRooms(Number(id));
+        
+        if (!matches || matches.length === 0) {
+            return reply.code(404).send({ message: "No matches found for this tournament" });
+        }
+        
+        return reply.code(200).send(matches);
+    } catch (error) {
+        console.error("Error in getTournamentMatchesWithRoomsController:", error);
+        return reply.code(500).send({ error: "Failed to fetch tournament matches with rooms" });
+    }
+}
+
+export async function updateMatchRoomController(req: FastifyRequest, reply: FastifyReply) {
+    try {
+        const { matchId } = req.params as { matchId: string };
+        const { roomId } = req.body as { roomId: string };
+
+        if (!roomId) {
+            return reply.code(400).send({ error: "roomId is required" });
+        }
+
+        TournamentRepository.updateMatchRoomId(Number(matchId), roomId);
+
+        return reply.code(200).send({ message: "Match room updated successfully" });
+    } catch (error) {
+        console.error("Error in updateMatchRoomController:", error);
+        return reply.code(500).send({ error: "Failed to update match room" });
     }
 }

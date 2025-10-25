@@ -15,6 +15,11 @@ import { Profile, profileHandlers } from "./pages/profile";
 import { Tournament } from "./pages/Tournament/tournament";
 
 export function router(route: string): string {
+	// for the roomid to be visible
+    if (route.startsWith("#/remote-pong")) {
+        setTimeout(remotePongHandlers, 0);
+        return remotePongPage();
+    }
     switch (route) {
         case "#/profile":
             setTimeout(profileHandlers, 0);

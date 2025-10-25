@@ -72,3 +72,18 @@ export function deleteRoom(roomId: string) {
   const stmt = db.prepare('DELETE FROM rooms WHERE id = ?');
   stmt.run(roomId);
 }
+
+export function addPlayerToRoom(roomId: string, playerId: string) {
+  // Insert player atomically to avoid race conditions
+  const insertPlayer = db.prepare(`
+    INSERT OR IGNORE INTO room_players (room_id, player_id) 
+    SELECT ?, ? WHERE NOT EXISTS (
+      SELECT 1 FROM room_players WHERE room_id = ? AND player_id = ?
+    )
+  `);
+  insertPlayer.run(roomId, playerId, roomId, playerId);
+  
+  // Ensure room exists
+  const insertRoom = db.prepare('INSERT OR IGNORE INTO rooms (id, state) VALUES (?, ?)');  
+  insertRoom.run(roomId, JSON.stringify({}));
+}

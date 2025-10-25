@@ -10,6 +10,8 @@ import {
     getTournamentPlayersController,
     leaveTournamentController,
     getTournamentByIdController,
+    updateMatchRoomController,
+    getTournamentMatchesWithRoomsController,
     /*finishTournamentController,
     updateMatchResultController,
     getTournamentMatchesController,
@@ -29,6 +31,8 @@ export default async function tournamentRoutes(app: FastifyInstance) {
     app.get("/tournaments/:id/join", joinTournamentController);
     app.get("/tournaments/:id/leave", leaveTournamentController);
     app.get("/tournaments/:id/players", getTournamentPlayersController);
+    app.put("/tournaments/matches/:matchId/room", updateMatchRoomController);
+    app.get("/tournaments/:id/matches", getTournamentMatchesWithRoomsController);
     /*app.delete("/tournament/:id", deleteTournamentController);
 
 

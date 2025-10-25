@@ -10,7 +10,7 @@ import { gameController, getIsPaused } from "./controllers/gameControllers";
 import { pongAiController } from "./controllers/pongAiController";
 import { roomRoutes } from "./routes/roomRoutes";
 import { roomStates } from "./services/roomService";
-import { saveRoom, getRoom, getAllRooms, deleteRoom as dbDeleteRoom } from "./db/roomRepository";
+import { saveRoom, getRoom, getAllRooms, deleteRoom as dbDeleteRoom, addPlayerToRoom } from "./db/roomRepository";
 import {
   getGameState,
   moveUp,
@@ -98,14 +98,8 @@ io.on("connection", (socket) => {
     if (roomId.startsWith("local_")) {
       // no persistence for local rooms
     } else {
-      let dbRoom = getRoom(roomId);
-      if (!dbRoom) {
-        dbRoom = { id: roomId, state: {}, players: [] };
-      }
-      if (!dbRoom.players.includes(socket.id)) {
-        dbRoom.players.push(socket.id);
-        saveRoom(roomId, dbRoom.state, dbRoom.players);
-      }
+      // Use a more robust approach to add players to avoid race conditions
+      addPlayerToRoom(roomId, socket.id);
     }
 
     let role: "left" | "right" = "left";

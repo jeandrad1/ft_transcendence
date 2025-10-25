@@ -92,7 +92,7 @@ export async function startTournament(tournamentId: number) {
       status: "in_progress",
       current_round: 1,
     },
-    players: players.map(p => ({ id: p.id, username: p.username })),
+    players: players.map((p: any) => ({ id: p.id, username: p.username })),
     matches,
   };
 }
@@ -102,6 +102,9 @@ export async function startRemoteTournament(tournamentId: number) {
   if (!tournament)
     throw new Error("Tournament not found");
 
+  if (tournament.status !== "pending")
+    throw new Error("Tournament already started");
+
   const playersNum = PlayerRepository.countByTournamentId(tournamentId);
 
   //if (playersNum !== 4)
@@ -109,24 +112,18 @@ export async function startRemoteTournament(tournamentId: number) {
 
   const players = PlayerRepository.getByTournamentId(tournamentId);
 
-  const matches: { id: number; player1_id: number; player2_id: number; round: number; status: string; roomId: string }[] = [];
+  const matches: { id: number; player1_id: number; player2_id: number; round: number; status: string }[] = [];
 
   for (let i = 0; i < players.length; i += 2) {
     const player1 = players[i];
     const player2 = players[i + 1];
   
-  const response = await fetch(`http://pong-service:7000/remote-rooms`, {
-    method: "POST",
-  })
-
-  const remoteRoom = await response.json();
-
-  const matchId = TournamentRepository.addRemoteMatch(
+    const matchId = TournamentRepository.addRemoteMatch(
       tournamentId,
       1, // round 1
       player1.id,
       player2.id,
-      remoteRoom.roomId,
+      null, // No roomId initially
     );
 
     matches.push({
@@ -135,7 +132,6 @@ export async function startRemoteTournament(tournamentId: number) {
       player2_id: player2.id,
       round: 1,
       status: "pending",
-      roomId: remoteRoom.roomId,
     });
   }
 
@@ -149,7 +145,7 @@ export async function startRemoteTournament(tournamentId: number) {
       status: "in_progress",
       current_round: 1,
     },
-    players: players.map(p => ({ id: p.id, username: p.username })),
+    players: players.map((p: any) => ({ id: p.id, username: p.username })),
     matches,
   };
 }
@@ -260,4 +256,20 @@ export async function getTournamentById(tournamentId: number) {
     throw new Error("Tournament not found");
 
   return tournament;
+}
+
+export async function getTournamentMatchesWithRooms(tournamentId: number) {
+  const matches = TournamentRepository.getMatchesByTournamentId(tournamentId);
+  if (!matches || matches.length === 0) {
+    return [];
+  }
+
+  return matches.map((match: any) => ({
+    id: match.id,
+    player1: { id: match.player1_id, username: match.player1_username },
+    player2: { id: match.player2_id, username: match.player2_username },
+    round: match.round,
+    status: match.status,
+    roomId: match.roomId,
+  }));
 }

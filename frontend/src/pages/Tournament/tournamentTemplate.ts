@@ -70,7 +70,7 @@ export async function getTournamentLobbyHTML(tournamentId: number): Promise<stri
   <div class="lobby-actions">
     <button id="join-btn" class="lobby-button">Join</button>
     <button id="leave-btn" class="lobby-button">Leave</button>
-    <button id="start-btn" class="lobby-button start" disabled>Start Tournament</button>
+    <button id="start-btn" class="lobby-button start" disabled style="display: none;">Start Tournament</button>
   </div>
 </div>
   `;
