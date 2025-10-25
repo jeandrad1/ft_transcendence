@@ -8,9 +8,11 @@ import { Chat, chatHandlers } from "./pages/chat";
 // import { pongPage } from "./pages/pong"; // Eliminado
 import { Settings } from "./pages/settings";
 import { localPongPage, localPongHandlers } from "./pages/localPong"; // Importar handlers
+import { localPowerUpPongPage, localPowerUpPongHandlers } from "./pages/localPowerUpPong"; // PowerUp mode
 import { remotePongPage, remotePongHandlers } from "./pages/remotePong"; // Importar handlers
 import { Game } from "./pages/game"
 import { Profile, profileHandlers } from "./pages/profile";
+import { Tournament } from "./pages/Tournament/tournament";
 
 export function router(route: string): string {
     const cleanRoute = route.split('?')[0];
@@ -37,6 +39,9 @@ export function router(route: string): string {
         case "#/pong/local":
             setTimeout(localPongHandlers, 0);
             return localPongPage();
+        case "#/pong/local/powerup":
+            setTimeout(localPowerUpPongHandlers, 0);
+            return localPowerUpPongPage();
         case "#/pong/remote":
             setTimeout(remotePongHandlers, 0);
             return remotePongPage();
@@ -44,6 +49,8 @@ export function router(route: string): string {
             return Settings();
         case "#/game":
             return Game();
+        case "#/tournament":
+            return Tournament();
         case "#/":
         default:
             return Home();
