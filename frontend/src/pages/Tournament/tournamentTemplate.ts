@@ -91,7 +91,6 @@ export function getTournamentPlayersHtml(): string {
   </div>
       <div class="players-buttons">
         <button id="fourPlayerBtn" class="tournament-button">4 Players</button>
-        <button id="eightPlayerBtn" class="tournament-button">8 Players</button>
       </div>
     </div>
     `;

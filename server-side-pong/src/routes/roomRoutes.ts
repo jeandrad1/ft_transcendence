@@ -1,6 +1,7 @@
 import { FastifyInstance } from "fastify";
 import { createRoom } from "../services/roomService";
 import { getRoom, getAllRooms, saveRoom } from "../db/roomRepository";
+import { scheduleAutoDeleteIfEmpty } from "../services/publicRoomtimers";
 
 export async function roomRoutes(fastify: FastifyInstance) {
   // Endpoint to add player to room
@@ -37,6 +38,13 @@ export async function roomRoutes(fastify: FastifyInstance) {
     const roomId = `room_${Math.random().toString(36).substring(2, 10)}`;
     // persist with public flag
     saveRoom(roomId, {}, [], isPublic);
+
+    // SCHEDULE AUTO-DELETE FOR PUBLIC ROOMS (60s) — new behavior
+    if (isPublic) {
+      scheduleAutoDeleteIfEmpty(roomId, 60_000);
+      fastify.log.info(`[ROOMS] Scheduled auto-delete for public room ${roomId} (60s)`);
+    }
+
     reply.send({ roomId, public: isPublic });
   });
 

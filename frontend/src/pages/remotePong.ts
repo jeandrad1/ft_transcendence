@@ -58,7 +58,7 @@ export function remotePongPage(): string {
     <div class="pong-container">
       <h1>Pong - Remote Game</h1>
             <div id="pong-lobby">
-                <h2>🏓 Pong Matchmaking Lobby</h2>
+                <h2>Pong Matchmaking Lobby</h2>
                 <div class="speed-controls">
                     <label>Difficulty:
                         <select id="difficultySelect">
@@ -75,10 +75,6 @@ export function remotePongPage(): string {
                             <option value="long">Long (10)</option>
                         </select>
                     </label>
-                </div>
-                <div class="lobby-players">
-                    <h3>Joined Players</h3>
-                    <ul id="player-list"></ul>
                 </div>
                 <!-- NEW: lobby actions for public rooms -->
                 <div class="lobby-actions">
@@ -343,6 +339,11 @@ function startGame(roomIdToJoin: string) {
         cleanup();
     });
 
+    socket.on("roleChanged", (newRole: "left" | "right") => {
+        console.log(`Role changed to ${newRole}`);
+        playerRole = newRole;
+    });
+
     socket.on("gameReady", (data: { roomId: string }) => {
         document.getElementById("roleInfo")!.textContent = `Room ${data.roomId} is ready. Opponent found!`;
         
@@ -408,10 +409,14 @@ function startGame(roomIdToJoin: string) {
     });
 
     socket.on("opponentDisconnected", () => {
-        const winnerMsg = document.getElementById("winnerMessage")!;
-        winnerMsg.textContent = "Opponent disconnected. You win!";
-        winnerMsg.style.display = "block";
-        endGame();
+    const winningScore = (gameState as any).winningScore ?? WINNING_SCORE;
+    if (playerRole === "left") {
+        gameState.scores.left = winningScore;
+    }
+	else {
+    	gameState.scores.right = winningScore;
+    }
+    	checkWinner();
     });
 
     window.addEventListener("keydown", handleKeyDown);
@@ -442,17 +447,29 @@ function checkWinner() {
     if (!gameState.gameEnded || !isGameRunning) return;
 
     const winnerMsg = document.getElementById("winnerMessage")!;
-    const winning = (gameState as any).winningScore ?? WINNING_SCORE;
-    const winner = gameState.scores.left >= winning ? "left" : "right";
-    winnerMsg.textContent = (playerRole === winner) ? "You Win!" : "You Lose!";
-    
-    winnerMsg.style.display = "block";
-    // If the local player won, send a victory to the user-management service
-    const winnerSide = winner;
-    if (playerRole === winnerSide) {
-        sendVictoryToUserManagement().catch(err => console.error('Failed to send victory:', err));
+    const winningScore = (gameState as any).winningScore ?? WINNING_SCORE;
+    let winner = "";
+    if (gameState.scores.left >= winningScore) {
+        winner = "left";
+    } else if (gameState.scores.right >= winningScore) {
+        winner = "right";
     }
-    endGame();
+
+    if (winner) {
+        const isWinner = (playerRole === winner);
+        winnerMsg.textContent = isWinner ? "You Win!" : "You Lose!";
+        winnerMsg.style.display = "block";
+
+        if (isWinner) {
+            sendVictoryToUserManagement();
+        }
+
+        setTimeout(() => {
+            if (socket) socket.disconnect();
+            // Optional redirect to remote pong lobby
+            window.location.hash = "#/pong/remote";
+        }, 3000);
+    }
 }
 
 async function sendVictoryToUserManagement() {

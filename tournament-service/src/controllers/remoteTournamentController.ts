@@ -2,7 +2,7 @@ import type { FastifyRequest, FastifyReply } from "fastify"
 import * as TournamentService from "../services/tournamentService";
 import { PlayerRepository } from "../repositories/playerRepository";
 import { TournamentRepository } from "../repositories/tournamentRepository";
-import jwt from 'jsonwebtoken';
+import jwt from "jsonwebtoken";
 
 export async function updateRemoteMatchResultController(req: FastifyRequest, reply: FastifyReply) {
     try {
