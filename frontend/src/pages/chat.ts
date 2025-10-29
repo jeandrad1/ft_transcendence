@@ -677,10 +677,17 @@ export function chatHandlers() {
         activeConversationId = otherUserId;
         activeConversationName = otherUserName;
 
-
         // Update the chat header
         const contactName = document.getElementById('contact-name');
-        if (contactName) contactName.textContent = otherUserName;
+        if (contactName) {
+            contactName.textContent = otherUserName;
+            contactName.setAttribute('data-username', otherUserName);
+            contactName.style.cursor = 'pointer';
+            contactName.onclick = async () => {
+                // Navegar al perfil del usuario
+                window.location.hash = `#/profile?username=${otherUserName}`;
+            };
+        }
 
         // Botón añadir/quitar amigo
         let friendsSet = (window as any).friendsSet;
