@@ -5,7 +5,7 @@
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  background: #fff;
+  background: linear-gradient(135deg, #0f2027, #21225A, #2c5364);
   font-family: 'DM Sans', Arial, sans-serif;
   gap: 48px;
 }
