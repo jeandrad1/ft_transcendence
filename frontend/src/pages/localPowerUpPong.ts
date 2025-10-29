@@ -94,28 +94,34 @@ export function localPowerUpPongPage(): string {
     <div class="pong-container">
       <h1>Pong - Local Power-Up</h1>
             <div id="modeSelection">
-                <div class="speed-controls">
-                    <label>Difficulty:
-                        <select id="difficultySelect">
-                            <option value="">Default</option>
-                            <option value="easy">Easy</option>
-                            <option value="medium">Medium</option>
-                            <option value="hard">Hard</option>
-                        </select>
-                    </label>
-                    <label>Game Length:
-                        <select id="gameLengthSelect">
-                            <option value="">Default</option>
-                            <option value="short">Short (5)</option>
-                            <option value="long">Long (10)</option>
-                        </select>
-                    </label>
-                    <label>Paddle Speed: <input type="number" id="paddleSpeedInput" placeholder="${PADDLE_SPEED}" step="1"/></label>
-                    <label>Ball Speed X: <input type="number" id="ballSpeedXInput" placeholder="${BALL_SPEED_X}" step="0.1"/></label>
-                    <label>Ball Speed Y: <input type="number" id="ballSpeedYInput" placeholder="${BALL_SPEED_Y}" step="0.1"/></label>
-                </div>
+                                <div class="speed-controls">
+                                        <label>Difficulty:
+                                            <select id="difficultySelect">
+                                                <option value="">Default</option>
+                                                <option value="easy">Easy</option>
+                                                <option value="medium">Medium</option>
+                                                <option value="hard">Hard</option>
+                                            </select>
+                                        </label>
+                                        <label>Game Length:
+                                            <select id="gameLengthSelect">
+                                                <option value="">Default</option>
+                                                <option value="short">Short (5)</option>
+                                                <option value="long">Long (10)</option>
+                                            </select>
+                                        </label>
+
+                                        <!-- Nuevo desplegable para el power-up (misma apariencia que los otros) -->
+                                        <label>Power-Up Velocidad:
+                                            <select id="powerupSelect" aria-label="Powerup Velocidad">
+                                                <option value="false">Desactivado</option>
+                                                <option value="true">Activado</option>
+                                            </select>
+                                        </label>
+                                </div>
                 <button id="1v1Btn" class="pong-button">1 vs 1</button>
                 <button id="1vAIBtn" class="pong-button">1 vs AI</button>
+                <button id="activateSpeedBtn" class="pong-button">Activar Power-Up Velocidad</button>
             </div>
       <div id="roleInfo"></div>
 
@@ -280,24 +286,41 @@ export function localPowerUpPongHandlers() {
         startGame(true);
     });
 
+    // Nuevo: sincronizar/select para power-up y hacer toggle con el botón
+    const powerupSelect = document.getElementById("powerupSelect") as HTMLSelectElement | null;
+    const activateBtn = document.getElementById("activateSpeedBtn") as HTMLButtonElement | null;
+
+    if (powerupSelect) {
+      const reflectBtnLabel = () => {
+        const enabled = powerupSelect.value === "true";
+        if (activateBtn) {
+          activateBtn.textContent = enabled ? "Power-Up: ACTIVADO" : "Activar Power-Up Velocidad";
+          activateBtn.classList.toggle("active-powerup", enabled);
+        }
+      };
+      reflectBtnLabel();
+
+      powerupSelect.addEventListener("change", async () => {
+        reflectBtnLabel();
+        // intenta informar al backend (si existe la partida local ya creada)
+        try {
+          await postGame(`/game/${roomId}/powerup?enabled=${powerupSelect.value}`);
+        } catch (err) {
+          console.warn("[LocalPowerUpPong] No se pudo cambiar powerup:", err);
+        }
+      });
+
+      // el botón hace toggle en el desplegable para UX rápida
+      if (activateBtn) {
+        activateBtn.addEventListener("click", () => {
+          powerupSelect.value = powerupSelect.value === "true" ? "false" : "true";
+          powerupSelect.dispatchEvent(new Event("change"));
+        });
+      }
+    }
+
     // Initial cleanup in case of hot-reloading or re-navigation
     cleanup();
-}
-
-function prepareGameUI(isAiMode: boolean) {
-    (document.getElementById("winnerMessage")!).style.display = "none";
-    (document.getElementById("modeSelection")!).style.display = "none";
-    (document.getElementById("gameInfo")!).style.display = "flex";
-    (document.getElementById("scoreboard")!).classList.remove("hidden");
-    (document.getElementById("extraInfo")!).classList.remove("hidden");
-
-    if (isAiMode) {
-        (document.querySelector(".right-controls p") as HTMLElement).textContent = "Right Player: AI";
-        document.getElementById("roleInfo")!.textContent = "Local mode: Player vs. AI";
-    } else {
-        (document.querySelector(".right-controls p") as HTMLElement).textContent = "Right Player: ↑ / ↓";
-        document.getElementById("roleInfo")!.textContent = "Local mode: Two players, one keyboard";
-    }
 }
 
 async function startGame(isAiMode: boolean) {

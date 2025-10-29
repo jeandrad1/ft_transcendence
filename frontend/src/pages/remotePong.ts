@@ -76,15 +76,13 @@ export function remotePongPage(): string {
                         </select>
                     </label>
                 </div>
-                <!-- NEW: lobby actions for public rooms -->
+
+                <!-- Manual buttons removed: automatic join/create via timeout -->
                 <div class="lobby-actions">
-                    <button id="createRoomBtn" class="lobby-button">Create Public Room</button> <!-- create public room -->
-                    <input id="roomIdInput" placeholder="Room ID to join" />
-                    <button id="joinRoomBtn" class="lobby-button">Join by ID</button>
-                    <button id="refreshRoomsBtn" class="lobby-button">Refresh Rooms</button> <!-- refresh public rooms list -->
+                    <p>Auto-joining public rooms. If none exist, a public room will be created automatically.</p>
                 </div>
 
-                <!-- NEW: public rooms list -->
+                <!-- public rooms list -->
                 <div class="rooms-list" id="roomsListContainer">
                     <h3>Public Rooms</h3>
                     <ul id="roomsList"></ul>
@@ -93,9 +91,8 @@ export function remotePongPage(): string {
       <div id="roleInfo"></div>
 
             <div class="scoreboard-container">
-                <button id="startGameBtn" class="pong-button hidden">Start Game</button>
+                <!-- Buttons removed for remote flow -->
                 <div id="scoreboard" class="scoreboard">0 : 0</div>
-                <button id="playAgainBtn" class="pong-button hidden">Play Again</button>
             </div>
 
       <p id="winnerMessage" class="winner-message" style="display: none;"></p>
@@ -189,69 +186,52 @@ export function remotePongHandlers() {
     cleanup();
     ctx = (document.getElementById("pongCanvas") as HTMLCanvasElement).getContext("2d")!;
 
-    // Load public rooms on open
-    loadPublicRooms().catch(err => console.warn("Failed loading rooms", err));
+    // Load public rooms on open and auto-join or create after a small timeout
+    loadPublicRooms().then(async (rooms) => {
+        // small delay to let UI render and to avoid race with invite param handling
+        await new Promise(res => setTimeout(res, 500));
 
-    // If URL contains ?room=<id> (from invitation link), auto-join that room
-    try {
-        const urlParams = new URLSearchParams(window.location.hash.split('?')[1] || '');
-        const inviteRoom = urlParams.get('room');
-        if (inviteRoom) {
-            // auto-join invited room
-            roomId = inviteRoom;
-            isRoomCreator = false;
-            prepareGameUI();
-            startGame(inviteRoom);
-            return; // skip adding manual create/join listeners duplication
-        }
-    } catch (err) {
-        console.warn('Failed parsing invite room param', err);
-    }
-
-    // Only add lobby event listeners for manual games
-    document.getElementById("createRoomBtn")!.addEventListener("click", async () => {
+        // If URL contains ?room=<id> (from invitation link), auto-join handled earlier.
+        // Otherwise, auto-join first public room or create one if none.
         try {
-            const response = await postApi("/game/remote-rooms");
-            if (!response.ok) throw new Error("Failed to create room");
-            const { roomId: newRoomId } = await response.json();
-            roomId = newRoomId;
-            isRoomCreator = true;
-            prepareGameUI();
-            startGame(newRoomId);
-        } catch (error) {
-            console.error("Error creating room:", error);
-            alert("Could not create room. Please try again.");
+            // If invite was parsed earlier and startGame has been called, skip auto flow
+            const urlParams = new URLSearchParams(window.location.hash.split('?')[1] || '');
+            const inviteRoom = urlParams.get('room');
+            if (inviteRoom) {
+                return;
+            }
+        } catch (err) {
+            console.warn('Failed parsing invite room param', err);
         }
-    });
 
-    document.getElementById("joinRoomBtn")!.addEventListener("click", () => {
-        const input = document.getElementById("roomIdInput") as HTMLInputElement;
-        const roomIdToJoin = input.value.trim();
-        if (roomIdToJoin) {
-            roomId = roomIdToJoin;
+        if (rooms && rooms.length > 0) {
+            const first = rooms[0];
+            const id = first.id ?? first.roomId ?? first.id;
+            roomId = id;
             isRoomCreator = false;
             prepareGameUI();
-            startGame(roomIdToJoin);
+            startGame(id);
         } else {
-            alert("Please enter a Room ID.");
+            // create room automatically
+            try {
+                const response = await postApi("/game/remote-rooms");
+                if (response.ok) {
+                    const body = await response.json();
+                    const newRoomId = body.roomId ?? body.id;
+                    roomId = newRoomId;
+                    isRoomCreator = true;
+                    prepareGameUI();
+                    // small delay to ensure server sets up room
+                    setTimeout(() => startGame(newRoomId), 300);
+                } else {
+                    console.error("Failed to auto-create room, status:", response.status);
+                    alert("No rooms available and could not create one automatically.");
+                }
+            } catch (error) {
+                console.error("Error auto-creating room:", error);
+            }
         }
-    });
-
-    document.getElementById("startGameBtn")!.addEventListener("click", () => {
-        if (!roomId) return;
-        postApi(`/game/${roomId}/resume`);
-        (document.getElementById("startGameBtn")!).classList.add("hidden");
-    });
-
-    document.getElementById("playAgainBtn")!.addEventListener("click", () => {
-        if (!roomId) return;
-        document.getElementById("winnerMessage")!.style.display = "none";
-        document.getElementById("playAgainBtn")!.classList.add("hidden");
-        postApi(`/game/${roomId}/init`).then(() => {
-            (document.getElementById("startGameBtn")!).classList.remove("hidden");
-        });
-        isGameRunning = false;
-    });
+    }).catch(err => console.warn("Failed loading rooms", err));
 }
 
 function prepareGameUI() {
@@ -265,42 +245,34 @@ function prepareGameUI() {
     (document.getElementById("startGameBtn")!).classList.add("hidden");
 }
 
-// New helper to fetch and render only public rooms
-async function loadPublicRooms() {
+async function loadPublicRooms(): Promise<any[]> {
     try {
         // GET /game/rooms?public=true via gateway
         const res = await postApi("/game/rooms?public=true", "GET");
         if (!res.ok) {
             console.warn("Failed fetching rooms:", res.status);
-            return;
+            return [];
         }
         const rooms = await res.json();
         const ul = document.getElementById("roomsList") as HTMLUListElement;
-        if (!ul) return;
+        if (!ul) return rooms || [];
         ul.innerHTML = "";
         if (!Array.isArray(rooms) || rooms.length === 0) {
             ul.innerHTML = "<li>No public rooms available</li>";
-            return;
+            return [];
         }
         rooms.forEach((r: any) => {
             const li = document.createElement("li");
             // server room object shape: { id, state, players }
             const id = r.id ?? r.roomId ?? r.id;
             const playersCount = (r.players || []).length;
-            li.textContent = `${id} (${playersCount} players) `;
-            const btn = document.createElement("button");
-            btn.textContent = "Join";
-            btn.addEventListener("click", () => {
-                roomId = id;
-                isRoomCreator = false;
-                prepareGameUI();
-                startGame(id);
-            });
-            li.appendChild(btn);
+            li.textContent = `${id} (${playersCount} players)`;
             ul.appendChild(li);
         });
+        return rooms;
     } catch (err: any) {
         console.error("Error loading public rooms:", err);
+        return [];
     }
 }
 
@@ -444,7 +416,8 @@ function startCountdownAndResume(roomToStart: string) {
 }
 
 function checkWinner() {
-    if (!gameState.gameEnded || !isGameRunning) return;
+    // Only require gameEnded; allow processing even if isGameRunning is false
+    if (!gameState.gameEnded) return;
 
     const winnerMsg = document.getElementById("winnerMessage")!;
     const winningScore = (gameState as any).winningScore ?? WINNING_SCORE;
@@ -464,10 +437,20 @@ function checkWinner() {
             sendVictoryToUserManagement();
         }
 
+        // Ensure a graceful leave: wait a short timeout so player sees the result, then disconnect and return to lobby
         setTimeout(() => {
-            if (socket) socket.disconnect();
-            // Optional redirect to remote pong lobby
-            window.location.hash = "#/pong/remote";
+            if (socket) {
+                try {
+                    socket.emit("leaveRoom", { roomId });
+                } catch (e) { /* ignore */ }
+                socket.disconnect();
+            }
+            // reset UI and go back to remote lobby
+            cleanup();
+            // small delay before navigating back so cleanup finishes
+            setTimeout(() => {
+                window.location.hash = "#/pong/remote";
+            }, 200);
         }, 3000);
     }
 }

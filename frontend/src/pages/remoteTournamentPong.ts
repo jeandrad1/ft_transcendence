@@ -70,14 +70,14 @@ export function remoteTournamentPongPage(): string {
 
       <div id="gameInfo" class="game-info" style="display:flex;">
         <div class="controls left-controls">
-          <p>Left Player: W / S</p>
+          <p>Left Player</p>
         </div>
 
     <canvas id="pongCanvas" width="800" height="600"></canvas>
     <div id="countdown" class="countdown hidden"></div>
 
         <div class="controls right-controls">
-          <p>Right Player: ↑ / ↓</p>
+          <p>Right Player</p>
         </div>
       </div>
 
