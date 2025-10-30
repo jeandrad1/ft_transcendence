@@ -1,3 +1,6 @@
+import { getElement } from "../pages/Login/loginDOM"
+import { restoreSessionUser } from "../pages/Login/loginHandlers";
+
 let accessToken: string | null = null;
 
 const apiHost = `${window.location.hostname}`;
@@ -42,29 +45,24 @@ export function getUserIdFromToken(): number | null {
 export async function refreshAccessToken(): Promise<boolean> {
 
     try {
-        const userStr = localStorage.getItem("user");
-        const user = JSON.parse(userStr!);
-        if (!user)
-            return (false);
-
         const res = await fetch(`http://${apiHost}:8080/auth/refresh`, {
             method: "POST",
             credentials: "include",
         });
     
-    if (!res.ok) {
+        const data = await res.json();
+        if (!res.ok || data.success === false) {
+            clearAuth();
+            return (false);
+        }
+
+        if (data.accessToken) {
+            setAccessToken(data.accessToken);
+            restoreSessionUser();
+            return (true);
+        }
         clearAuth();
         return (false);
-    }
-
-    const data = await res.json();
-    if (data.accessToken) {
-        setAccessToken(data.accessToken);
-        return (true);
-    }
-
-    clearAuth();
-    return (false);
     } catch (err) {
         clearAuth();
         return (false);
