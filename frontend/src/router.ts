@@ -13,10 +13,16 @@ import { Profile, profileHandlers } from "./pages/profile";
 import { Tournament } from "./pages/Tournament/tournament";
 import { isLoggedIn } from "./state/authState";
 import { forgotPass } from "./pages/Login/forgotPass";
+import { ErrorPage } from "./pages/ErrorPage";
+import { TermsPage } from "./pages/TermsPage";
 
 export function router(route: string): string {
     const cleanRoute = route.split('?')[0];
     switch (cleanRoute) {
+        case "#/error":
+            return ErrorPage();
+        case "#/terms":
+            return TermsPage();
         case "#/profile":
             if (isLoggedIn()) {
                 setTimeout(profileHandlers, 0);
@@ -75,7 +81,8 @@ export function router(route: string): string {
         case "#/tournament":
             return Tournament();
         case "#/":
-        default:
             return Home();
+        default:
+            return ErrorPage();
     }
 }
