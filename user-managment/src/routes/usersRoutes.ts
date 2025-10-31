@@ -11,6 +11,7 @@ import {
   avatarChanger,
   passwordControl,
   passwordChanger,
+  removeUser,
 } from "../controllers/usersController";
 
 import {
@@ -47,5 +48,6 @@ export default async (fastify: FastifyInstance) => {
     fastify.get("/getFriends", getFriendController);
     fastify.post("/addFriend", addFriendController);
     fastify.post("/removeFriend", removeFriendController);
-    fastify.get("/checkFriend", checkFriendController)
+    fastify.get("/checkFriend", checkFriendController);
+    fastify.delete("/removeUsers", removeUser)
 };

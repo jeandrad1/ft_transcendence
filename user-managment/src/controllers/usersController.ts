@@ -11,7 +11,8 @@ import {
 	getUserByEmail, 
 	getUserAvatar,
 	avatarUploader,
-	avatarDeleter
+	avatarDeleter,
+	userRemover
 } from "../services/usersService";
 
 export async function registerController(req: FastifyRequest, reply: FastifyReply) {
@@ -172,19 +173,10 @@ export async function avatarChanger(req: FastifyRequest, reply: FastifyReply) {
 		return reply.code(400).send({ error: "No file uploaded" });
 	}
 	try {
-		console.log("File info:", {
-			mimetype: data.mimetype,
-			filename: data.filename,
-			encoding: data.encoding,
-			fieldname: data.fieldname
-		});
-		console.log("Completed Controller 1");
 		const avatar = await getUserAvatar(userId);
-		console.log("Completed Controller 2");
 		if (avatar) {
 			await avatarDeleter(userId);
 		}
-		console.log("Completed Controller 3");
 		await avatarUploader(userId, data);
 		return reply.send({ message: "Avatar changed successfully" });
 	} catch (err: any) {
@@ -240,4 +232,20 @@ export async function getCurrentUserController(req: FastifyRequest, reply: Fasti
 
 	const user = await getUserById(Number(userId));
 	return { user };
+}
+
+export async function removeUser(req: FastifyRequest, reply: FastifyReply) {
+	const userId = req.headers["x-user-id"];
+
+	try {
+		const avatar = await getUserAvatar(userId);
+		if (avatar) {
+			await avatarDeleter(userId);
+		}
+		userRemover(userId);
+		return reply.send({ message: "User removed successfully" });
+	}
+	catch (err: any) {
+		return reply.code(400).send({ error: err.message });
+	}
 }

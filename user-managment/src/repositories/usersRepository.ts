@@ -53,6 +53,11 @@ export function findIDByUsername(username: string) {
 	return result ? result.id : null;
 }
 
+export function removeUser(id: number) {
+	const stmt = db.prepare("DELETE FROM users WHERE if = ?");
+	return( stmt.run(id) );
+}
+
 export function findAllUsers() {
 	const stmt = db.prepare("SELECT id, username, email FROM users ORDER BY username");
 	return stmt.all();
