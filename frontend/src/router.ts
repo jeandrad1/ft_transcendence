@@ -38,10 +38,10 @@ export function router(route: string): string {
             }
             return Login();
         case "#/login/2fa":
-            if (isLoggedIn()) {
-                return TwoFALogin();
-            }
-            return Login();
+            if (!isLoggedIn())
+                return TwoFALogin(0);
+            else
+                return (Profile());
         case "#/forgot-pass":
             return forgotPass();
             case "#/status":

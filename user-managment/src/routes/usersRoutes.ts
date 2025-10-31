@@ -12,6 +12,7 @@ import {
   passwordControl,
   passwordChanger,
   removeUser,
+  passwordChangerController,
 } from "../controllers/usersController";
 
 import {
@@ -35,7 +36,8 @@ export default async (fastify: FastifyInstance) => {
     fastify.post("/changeUsername", usernameChanger);
     fastify.post("/changeEmail", emailChanger);
     fastify.post("/checkPassword", passwordControl);
-    fastify.post("/changePassword", passwordChanger)
+    fastify.post("/changePassword", passwordChanger);
+    fastify.post("/changePasswordBackend", passwordChangerController);
     fastify.get("/getAllUsers", getAllUsersController);
     fastify.post("/getUserByName", userGetterByUsername);
     fastify.post("/getUserById", userGetterById);

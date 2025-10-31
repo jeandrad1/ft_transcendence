@@ -1,5 +1,5 @@
 import { TwoFAFormHtml } from "./loginTemplate";
-import { setAccessToken } from "../../state/authState";
+import { setAccessToken, isLoggedIn } from "../../state/authState";
 import { setText } from "./loginDOM";
 
 const apiHost = `${window.location.hostname}`;
@@ -7,7 +7,11 @@ const apiHost = `${window.location.hostname}`;
 export async function handleTwoFA(tempToken: string, username: string, userId: number) {
     //const app = document.getElementById("app")!;
     //app.innerHTML = TwoFAFormHtml();
-    
+
+  if (isLoggedIn()) {
+    location.hash = "#/login";
+  }
+
     setTimeout(async () => {
         const cancelBtn = document.querySelector<HTMLButtonElement>("#twofa-cancel")!;
         const qrDiv = document.querySelector<HTMLDivElement>(".twofa-qrcode")!;
@@ -56,9 +60,11 @@ export async function handleTwoFA(tempToken: string, username: string, userId: n
                 const verifyData = await verifyRes.json();
                         
                 if (verifyRes.ok && verifyData.accessToken) {
+                    console.log("Entra 2");
                     setAccessToken(verifyData.accessToken);
+                    localStorage.setItem("user", JSON.stringify(verifyData.user));
                     setText(twofaResult, "✅ 2FA verified, loggen in!");
-                    setTimeout(() => location.hash = "#/health", 2000);
+                    setTimeout(() => location.hash = "#/", 1000);
                 } else {
                     setText(twofaResult, "❌ Invalid 2FA code");
                 }

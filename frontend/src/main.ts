@@ -19,14 +19,12 @@ export async function render() {
 
     const accessToken = getAccessToken();
     if (accessToken) {
-        const user = await fetchCurrentUser(accessToken);
-        localStorage.setItem("user", JSON.stringify(user.user));
-        
-        // Update profile link to current user's profile
-        // Maybe to use something later for direct game invitations
+        const userStr = localStorage.getItem("user");
+        if (userStr) {
+            const user = JSON.parse(userStr);
         const profileLink = document.querySelector('a[href="#/profile"]') as HTMLAnchorElement;
-        if (profileLink && user.user.username) {
-            profileLink.href = `#/profile?username=${user.user.username}`;
+        if (profileLink && user?.username)
+            profileLink.href = `#/profile?username=${user?.username}`;
         }
     }
     userLoggedIn();
