@@ -9,9 +9,11 @@ import {
     setActiveConversationName,
     setLoadConversationsTimeout,
     getConnectedUsersSet,
+    getBlockedUsers,
 } from "./chatState";
 import { getMessages, displayMessages, updateMessageInputVisibility } from "./chatMessages";
 import { updateFriendBtn } from "./chatFriends";
+import { updateBlockButtonUI } from "./chatBlockUsers";
 
 const apiHost = `${window.location.hostname}`;
 
@@ -88,6 +90,9 @@ export async function selectConversation(otherUserId: number, otherUserName: str
     if (profileBtn) {
         profileBtn.style.display = 'block';
     }
+
+    // Update block button state based on current blocked users
+    updateBlockButtonUI();
 
     // Show invite to game button
     const inviteBtn = document.getElementById('invite-game-btn') as HTMLButtonElement;

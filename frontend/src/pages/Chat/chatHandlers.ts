@@ -5,7 +5,7 @@ import { loadConversationsAuto } from "./chatConversations";
 import { loadAllUsers, getUserProfile } from "./chatUtils";
 import { handleUserSearch } from "./chatUserSearch";
 import { getActiveConversationId } from "./chatState";
-import { blockHandler } from "./chatBlockUsers";
+import { blockHandler, fetchBlockedUsers } from "./chatBlockUsers";
 import { sendGameInvitation } from "../../services/api";
 import { openNewChatModal, closeProfileModal } from "./chatModal";
 
@@ -29,6 +29,18 @@ export function chatHandlers() {
     // Initialize WebSocket connection
     initializeWebSocket();
 
+    // Load blocked users from backend first, then load conversations
+    fetchBlockedUsers()
+        .then(() => {
+            // Load conversations after blocked users are loaded
+            loadConversationsAuto();
+        })
+        .catch(err => {
+            console.error("Failed to load blocked users on page load:", err);
+            // Load conversations anyway even if blocked users fail
+            loadConversationsAuto();
+        });
+
     // Eliminar el listener previo antes de añadirlo
     messageForm.removeEventListener('submit', handleMessageFormSubmit);
     messageForm.addEventListener('submit', handleMessageFormSubmit);
@@ -37,9 +49,6 @@ export function chatHandlers() {
      * Automatically load and display conversations with real usernames
      * Handles loading states and error scenarios
      */
-
-    // Load conversations automatically on page load
-    loadConversationsAuto();
 
     // Handle new chat functionality
     const sidebarNewChatBtn = document.getElementById('sidebar-new-chat') as HTMLButtonElement;
