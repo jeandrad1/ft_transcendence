@@ -9,6 +9,7 @@ import { Settings } from "./pages/settings";
 import { localPongPage, localPongHandlers } from "./pages/localPong"; // Importar handlers
 import { localPowerUpPongPage, localPowerUpPongHandlers } from "./pages/localPowerUpPong"; // PowerUp mode
 import { remotePongPage, remotePongHandlers } from "./pages/remotePong"; // Importar handlers
+import { remoteTournamentPongPage, remoteTournamentPongHandlers } from "./pages/remoteTournamentPong"; // Importar handlers
 import { Game } from "./pages/game"
 import { Profile, profileHandlers } from "./pages/profile";
 import { Tournament } from "./pages/Tournament/tournament";
@@ -16,10 +17,24 @@ import { isLoggedIn } from "./state/authState";
 import { forgotPass } from "./pages/Login/forgotPass";
 import { ErrorPage } from "./pages/ErrorPage";
 import { TermsPage } from "./pages/TermsPage";
+import { privateRemotePongPage, privateRemotePongHandlers } from "./pages/privateRemotePong";
 
 export function router(route: string): string {
-    const cleanRoute = route.split('?')[0];
-    switch (cleanRoute) {
+    // for the roomid to be visible
+    if (route.startsWith("#/remote-pong")) {
+        setTimeout(remotePongHandlers, 0);
+        return remotePongPage();
+    }
+    if (route.startsWith("#/private-remote-pong")) {
+        setTimeout(privateRemotePongHandlers, 0);
+        return privateRemotePongPage();
+    }
+
+    if (route.startsWith("#/remote-tournament-pong")) {
+        setTimeout(remoteTournamentPongHandlers, 0);
+        return remoteTournamentPongPage();
+    }
+    switch (route) {
         case "#/error":
             return ErrorPage();
         case "#/terms":
@@ -30,6 +45,11 @@ export function router(route: string): string {
                 return Profile();
             }
             return Login();
+		case "#/profile/":
+        case route.match(/^#\/profile\/.+/)?.input || "":
+            setTimeout(profileHandlers, 0);
+            return Profile();
+
         case "#/about":
             return About();
         case "#/login":

@@ -6,11 +6,11 @@
 import fastify from "fastify";
 import { Server } from "socket.io";
 import cors from "@fastify/cors";
-import { gameController, getIsPaused } from "./controllers/gameControllers";
+import { gameController, getIsPaused, resumeRoom } from "./controllers/gameControllers";
 import { pongAiController } from "./controllers/pongAiController";
 import { roomRoutes } from "./routes/roomRoutes";
 import { roomStates } from "./services/roomService";
-import { saveRoom, getRoom, getAllRooms, deleteRoom as dbDeleteRoom } from "./db/roomRepository";
+import { saveRoom, getRoom, getAllRooms, deleteRoom as dbDeleteRoom, addPlayerToRoom } from "./db/roomRepository";
 import {
   getGameState,
   moveUp,
@@ -98,14 +98,8 @@ io.on("connection", (socket) => {
     if (roomId.startsWith("local_")) {
       // no persistence for local rooms
     } else {
-      let dbRoom = getRoom(roomId);
-      if (!dbRoom) {
-        dbRoom = { id: roomId, state: {}, players: [] };
-      }
-      if (!dbRoom.players.includes(socket.id)) {
-        dbRoom.players.push(socket.id);
-        saveRoom(roomId, dbRoom.state, dbRoom.players);
-      }
+      // Use a more robust approach to add players to avoid race conditions
+      addPlayerToRoom(roomId, socket.id);
     }
 
     let role: "left" | "right" = "left";
@@ -125,8 +119,14 @@ io.on("connection", (socket) => {
 
     if (roomId.startsWith("local_")) {
       const roomAdapter = io.sockets.adapter.rooms.get(roomId);
-      if (roomAdapter && roomAdapter.size === 2) {
-        io.to(roomId).emit("gameReady", { roomId });
+    if (roomAdapter && roomAdapter.size === 2) {
+      io.to(roomId).emit("gameReady", { roomId });
+      try {
+        // Trigger server-driven resume to start the match automatically
+        resumeRoom(io, roomId);
+      } catch (err) {
+        console.warn("Failed to auto-resume room:", err);
+      }
       }
     } else {
       const dbRoom = getRoom(roomId);
@@ -163,18 +163,19 @@ io.on("connection", (socket) => {
           dbRoom.players.splice(playerIndex, 1);
           const remainingPlayerId = dbRoom.players[0];
           // Game state
-          const state = getGameState(roomId);
-          if (state && !state.gameEnded) {
-            const disconnectedPlayerRole = playerIndex === 0 ? "left" : "right";
-            if (disconnectedPlayerRole === "left") {
-              state.scores.right = WINNING_SCORE;
-            } else {
-              state.scores.left = WINNING_SCORE;
+            const state = getGameState(roomId);
+            // Only award victory if the game was actually running (not paused) and not already ended
+            if (state && !state.gameEnded && !getIsPaused(roomId)) {
+              const disconnectedPlayerRole = playerIndex === 0 ? "left" : "right";
+              if (disconnectedPlayerRole === "left") {
+                state.scores.right = WINNING_SCORE;
+              } else {
+                state.scores.left = WINNING_SCORE;
+              }
+              state.gameEnded = true;
+              state.gameEndedTimestamp = Date.now();
+              io.to(roomId).emit("gameState", state);
             }
-            state.gameEnded = true;
-            state.gameEndedTimestamp = Date.now();
-            io.to(roomId).emit("gameState", state);
-          }
           if (remainingPlayerId) {
             io.to(roomId).emit("opponentDisconnected");
           }

@@ -1,5 +1,4 @@
 import db from "../db/sqlite"
-
 export interface TournamentCreateDTO {
     name: string;
     mode: "local" | "remote";
@@ -13,7 +12,6 @@ export interface TournamentCreateDTO {
 }
 
 export interface RemoteTournamentCreateDTO {
-    id: number;
     name: string;
     mode: "remote";
     creator_id?: number | null;
@@ -107,7 +105,7 @@ export class TournamentRepository {
         return result.lastInsertRowid as number;
     }
 
-    static addRemoteMatch(tournamentId: number, round: number, player1_id: number, player2_id: number, roomId: string) {
+    static addRemoteMatch(tournamentId: number, round: number, player1_id: number, player2_id: number, roomId: string | null) {
         const stmt = db.prepare(`INSERT INTO matches (tournament_id, round, player1_id, player2_id, roomId) 
             VALUES (?, ?, ?, ?, ?)`
         );
@@ -115,12 +113,23 @@ export class TournamentRepository {
         return result.lastInsertRowid as number;
     }
 
-    static updateMatchResult(matchId: number, winner_id: number, score1: number, score2: number) {
+    static updateMatchRoomId(matchId: number, roomId: string) {
         const stmt = db.prepare(`
             UPDATE matches
-            SET winner_id = ?, score_player1 = ?, score_player2 = ?, status = 'completed', updated_at = CURRENT_TIMESTAMP 
-            WHERE id = ?`);
-            stmt.run(winner_id, score1, score2, matchId);
+            SET roomId = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        `);
+        stmt.run(roomId, matchId);
+    }
+
+    static updateMatchResult(matchId: number, winnerId: number): boolean {
+        const stmt = db.prepare(`
+            UPDATE matches
+            SET winner_id = ?, status = 'completed', updated_at = CURRENT_TIMESTAMP
+            WHERE id = ? AND (status IS NULL OR status != 'completed')
+        `);
+        const result = stmt.run(winnerId, matchId);
+        return result.changes > 0;
     }
 
     static deleteTournament(id: number) {
@@ -136,12 +145,26 @@ export class TournamentRepository {
             stmt.run(round, tournamentId);
     }
 
-    static setWinner(tournamentId: number, winnerId: number) {
+    static getMatchesByTournamentId(tournamentId: number) {
         const stmt = db.prepare(`
-            UPDATE tournaments
-            SET winner_id = ?, status = 'completed', updated_at = CURRENT_TIMESTAMP
-            WHERE id = ?
-            `);
-            stmt.run(winnerId, tournamentId);
+            SELECT m.*, p1.username as player1_username, p2.username as player2_username
+            FROM matches m
+            LEFT JOIN players p1 ON m.player1_id = p1.id
+            LEFT JOIN players p2 ON m.player2_id = p2.id
+            WHERE m.tournament_id = ?
+            ORDER BY m.round ASC, m.id ASC
+        `);
+        return stmt.all(tournamentId);
+    }
+
+    static getMatchById(matchId: number) {
+        const stmt = db.prepare(`
+            SELECT m.*, p1.username as player1_username, p2.username as player2_username
+            FROM matches m
+            LEFT JOIN players p1 ON m.player1_id = p1.id
+            LEFT JOIN players p2 ON m.player2_id = p2.id
+            WHERE m.id = ?
+        `);
+        return stmt.get(matchId);
     }
 }

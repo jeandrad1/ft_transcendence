@@ -17,6 +17,9 @@ const publicUrls = [
     "/tournaments/local",
     "/tournaments/:id/start",
     "/tournaments/:id/advance",
+	"/game/remote-rooms",
+    "/game/rooms",
+
 ];
 
 export async function authMiddleware(req: FastifyRequest, reply: FastifyReply) {
@@ -30,12 +33,12 @@ export async function authMiddleware(req: FastifyRequest, reply: FastifyReply) {
     return publicUrl === urlPath;
   });
 
-  // ✅ Allow public or WebSocket routes
+  // Allow public or WebSocket routes
   if (isPublic || urlPath.startsWith("/ws")) {
     return;
   }
 
-  // ✅ Allow local games
+  // Allow local games
   if (urlPath.startsWith("/game/local")) {
     return;
   }

@@ -22,6 +22,9 @@ import {
 // Map to keep pending serve timers per room (including 'local') so we can clear them
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const serveTimers = new Map<string, any>();
+// Map to keep scheduled deletion timers for finished rooms
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const deletionTimers = new Map<string, NodeJS.Timeout>();
 
 import { roomStates, createInitialState } from "./roomService";
 import { getRoom, saveRoom, deleteRoom as dbDeleteRoom } from "../db/roomRepository";
@@ -56,21 +59,27 @@ export function resetGame(roomId?: string): GameState {
 }
 
 export function deleteRoom(roomId: string) {
-	// Clear any pending serve timer
-	const timer = serveTimers.get(roomId);
-	if (timer) {
-		clearTimeout(timer);
-		serveTimers.delete(roomId);
-	}
-	// Remove stored state
-	roomStates.delete(roomId);
-	// cleaning for local rooms
-	if (roomId.startsWith("local_")) {
-		// maybe a cleaining here for locals ¿?
-	} else {
-		// delete database
-		dbDeleteRoom(roomId);
-	}
+    // Clear any pending serve timer
+    const timer = serveTimers.get(roomId);
+    if (timer) {
+        clearTimeout(timer);
+        serveTimers.delete(roomId);
+    }
+    // Clear scheduled deletion if exists
+    const delTimer = deletionTimers.get(roomId);
+    if (delTimer) {
+        clearTimeout(delTimer);
+        deletionTimers.delete(roomId);
+    }
+    // Remove stored state
+    roomStates.delete(roomId);
+    // cleaning for local rooms
+    if (roomId.startsWith("local_")) {
+        // maybe a cleaining here for locals ¿?
+    } else {
+        // delete database
+        dbDeleteRoom(roomId);
+    }
 }
 
 export function getGameState(roomId?: string): GameState | undefined {
@@ -221,10 +230,32 @@ export function updateGame(roomId?: string): GameState | undefined {
 
 	const winningScore = typeof state.winningScore === 'number' ? state.winningScore : WINNING_SCORE;
 	if (state.scores.left >= winningScore || state.scores.right >= winningScore) {
+		// Mark as ended and schedule room cleanup (if not already scheduled)
+		const wasEnded = !!state.gameEnded;
 		state.gameEnded = true;
 		state.gameEndedTimestamp = Date.now();
 		state.ball.dx = 0;
 		state.ball.dy = 0;
+
+		if (!wasEnded && roomId && !roomId.startsWith('local_') && roomId !== 'local') {
+			// schedule deletion after short grace period so clients see final state
+        const key = roomId ?? "local";
+        if (!wasEnded && roomId && !roomId.startsWith('local_') && roomId !== 'local') {
+            if (!deletionTimers.has(key)) {
+                const t = setTimeout(() => {
+                    try {
+                        console.log(`[GameServices] Deleting room ${key} 5s after match end`);
+                        deleteRoom(key);
+                    } catch (err) {
+                        console.warn("[GameServices] Failed deleting room after match end", key, err);
+                    } finally {
+                        deletionTimers.delete(key);
+                    }
+                }, 5000);
+                deletionTimers.set(key, t);
+            }
+        }
+		}
 	}
 
 	if (roomId && roomId !== "local") {

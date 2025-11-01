@@ -12,6 +12,7 @@ let isGameRunning = false;
 let playerRole: "left" | "right" | null = null;
 let roomId: string | null = null;
 let isRoomCreator = false;
+let gameInitialized = false;
 
 const apiHost = `http://${window.location.hostname}:8080`;
 
@@ -56,7 +57,7 @@ export function remotePongPage(): string {
     return `
     <div class="pong-container">
       <h1>Pong - Remote Game</h1>
-            <div id="modeSelection">
+            <div id="pong-lobby">
                 <div class="speed-controls">
                     <label>Difficulty:
                         <select id="difficultySelect">
@@ -74,18 +75,23 @@ export function remotePongPage(): string {
                         </select>
                     </label>
                 </div>
-                <button id="createRoomBtn" class="pong-button">Create Room</button>
-                <div class="join-room-container">
-                    <input type="text" id="roomIdInput" placeholder="Enter Room ID">
-                    <button id="joinRoomBtn" class="pong-button">Join Room</button>
+                <div class="lobby-actions">
+                    <button id="createRoomBtn" class="lobby-button">Create Public Room</button> <!-- create public room -->
+                </div>
+
+                <!-- NEW: public rooms list -->
+                <div class="rooms-list" id="roomsListContainer">
+                    <h3>Public Rooms</h3>
+                    <ul id="roomsList"></ul>
                 </div>
             </div>
       <div id="roleInfo"></div>
 
             <div class="scoreboard-container">
                 <button id="startGameBtn" class="pong-button hidden">Start Game</button>
-                <div id="scoreboard" class="scoreboard">0 : 0</div>
-                <button id="playAgainBtn" class="pong-button hidden">Play Again</button>
+                <!-- hide scoreboard while in lobby -->
+                <div id="scoreboard" class="scoreboard hidden">0 : 0</div>
+				<button id="playAgainBtn" class="pong-button hidden">Play Again</button>
             </div>
 
       <p id="winnerMessage" class="winner-message" style="display: none;"></p>
@@ -117,6 +123,8 @@ function cleanup() {
     window.removeEventListener("keyup", handleKeyUp);
     isGameRunning = false;
     isRoomCreator = false;
+    gameInitialized = false;
+    try { document.getElementById("scoreboard")?.classList.add("hidden"); } catch (e) {}
 }
 
 // Helper: POST with Authorization header and retry after refresh on 401
@@ -178,32 +186,33 @@ export function remotePongHandlers() {
     cleanup();
     ctx = (document.getElementById("pongCanvas") as HTMLCanvasElement).getContext("2d")!;
 
-    // Detect if there's a roomId in the URL to auto-join
-    const urlParams = new URLSearchParams(window.location.hash.split('?')[1] || '');
-    let autoRoomId = urlParams.get('room');
-    if (!autoRoomId) {
-        // Fallback: read from localStorage if it exists
-        autoRoomId = localStorage.getItem('pendingRemoteRoomId') || null;
-        if (autoRoomId) {
-            // Clear to avoid re-entries
-            localStorage.removeItem('pendingRemoteRoomId');
+    // Load public rooms on open
+    loadPublicRooms().catch(err => console.warn("Failed loading rooms", err));
+
+    // If URL contains ?room=<id> (from invitation link), auto-join that room
+    try {
+        const urlParams = new URLSearchParams(window.location.hash.split('?')[1] || '');
+        const inviteRoom = urlParams.get('room');
+        if (inviteRoom) {
+            // auto-join invited room
+            roomId = inviteRoom;
+            isRoomCreator = false;
+            prepareGameUI();
+            startGame(inviteRoom);
+            return; // skip adding manual create/join listeners duplication
         }
-    }
-    if (autoRoomId) {
-        roomId = autoRoomId;
-        prepareGameUI();
-        startGame(autoRoomId);
+    } catch (err) {
+        console.warn('Failed parsing invite room param', err);
     }
 
+    // Only add lobby event listeners for manual games
     document.getElementById("createRoomBtn")!.addEventListener("click", async () => {
         try {
-            // new endpoint for remote rooms
             const response = await postApi("/game/remote-rooms");
             if (!response.ok) throw new Error("Failed to create room");
             const { roomId: newRoomId } = await response.json();
             roomId = newRoomId;
             isRoomCreator = true;
-            // Options will be applied after init when the room becomes ready
             prepareGameUI();
             startGame(newRoomId);
         } catch (error) {
@@ -243,11 +252,55 @@ export function remotePongHandlers() {
 }
 
 function prepareGameUI() {
-    (document.getElementById("modeSelection")!).style.display = "none";
+    (document.getElementById("pong-lobby")!).style.display = "none";
     (document.getElementById("pongCanvas")!).style.display = "block";
     (document.getElementById("gameInfo")!).style.display = "flex";
     (document.getElementById("winnerMessage")!).style.display = "none";
     (document.getElementById("playAgainBtn")!).classList.add("hidden");
+    
+    // For manual games, start button will be shown after init
+    (document.getElementById("startGameBtn")!).classList.add("hidden");
+	try { document.getElementById("scoreboard")!.classList.remove("hidden"); } catch(e) {}
+
+}
+
+// New helper to fetch and render only public rooms
+async function loadPublicRooms() {
+    try {
+        // GET /game/rooms?public=true via gateway
+        const res = await postApi("/game/rooms?public=true", "GET");
+        if (!res.ok) {
+            console.warn("Failed fetching rooms:", res.status);
+            return;
+        }
+        const rooms = await res.json();
+        const ul = document.getElementById("roomsList") as HTMLUListElement;
+        if (!ul) return;
+        ul.innerHTML = "";
+        if (!Array.isArray(rooms) || rooms.length === 0) {
+            ul.innerHTML = "<li>No public rooms available</li>";
+            return;
+        }
+        rooms.forEach((r: any) => {
+            const li = document.createElement("li");
+            // server room object shape: { id, state, players }
+            const id = r.id ?? r.roomId ?? r.id;
+            const playersCount = (r.players || []).length;
+            li.textContent = `${id} (${playersCount} players) `;
+            const btn = document.createElement("button");
+            btn.textContent = "Join";
+            btn.addEventListener("click", () => {
+                roomId = id;
+                isRoomCreator = false;
+                prepareGameUI();
+                startGame(id);
+            });
+            li.appendChild(btn);
+            ul.appendChild(li);
+        });
+    } catch (err: any) {
+        console.error("Error loading public rooms:", err);
+    }
 }
 
 function startGame(roomIdToJoin: string) {
@@ -266,12 +319,13 @@ function startGame(roomIdToJoin: string) {
 
         const roleInfo = document.getElementById("roleInfo")!;
         roleInfo.textContent = `You are: ${playerRole} in room ${roomId}. Waiting for opponent...`;
+        window.history.replaceState(null, '', `#/remote-pong?room=${data.roomId}`);
     });
 
     socket.on('roomFull', (payload: { roomId:string }) => {
         alert(`Room ${payload.roomId} is full. Try another room or create a new one.`);
         // Optionally, reset the UI
-        (document.getElementById("modeSelection")!).style.display = "block";
+        (document.getElementById("pong-lobby")!).style.display = "block";
         (document.getElementById("gameInfo")!).style.display = "none";
         cleanup();
     });
@@ -279,41 +333,52 @@ function startGame(roomIdToJoin: string) {
     socket.on('roomNotFound', (payload: { roomId: string }) => {
         alert(`Room ${payload.roomId} not found. Please check the ID and try again.`);
         // Optionally, reset the UI
-        (document.getElementById("modeSelection")!).style.display = "block";
+        (document.getElementById("pong-lobby")!).style.display = "block";
         (document.getElementById("gameInfo")!).style.display = "none";
         cleanup();
     });
 
     socket.on("gameReady", (data: { roomId: string }) => {
         document.getElementById("roleInfo")!.textContent = `Room ${data.roomId} is ready. Opponent found!`;
-        // Initialize the game state on the server and then apply custom options
-        postApi(`/game/${data.roomId}/init`).then(async () => {
-            // Only the player who created the room may apply the difficulty/length settings
-            if (isRoomCreator) {
-                try {
-                    const difficulty = (document.getElementById('difficultySelect') as HTMLSelectElement)?.value;
-                    const gameLength = (document.getElementById('gameLengthSelect') as HTMLSelectElement)?.value;
-                    const body: any = {};
-                    if (difficulty && difficulty.trim() !== '') body.difficulty = difficulty;
-                    if (gameLength && gameLength.trim() !== '') body.gameLength = gameLength;
-                    if (Object.keys(body).length > 0) {
-                        console.log('[RemotePong] Applying room options', body);
-                        const resp = await postApiJson(`/game/${data.roomId}/speeds`, body);
-                        console.log('[RemotePong] Speeds POST status', resp.status);
+        
+        // Only initialize the game once per room to avoid conflicts
+        if (!gameInitialized) {
+            gameInitialized = true;
+            // Initialize the game state on the server and then apply custom options
+            postApi(`/game/${data.roomId}/init`).then(async () => {
+                // Only the player who created the room may apply the difficulty/length settings
+                if (isRoomCreator) {
+                    try {
+                        const difficulty = (document.getElementById('difficultySelect') as HTMLSelectElement)?.value;
+                        const gameLength = (document.getElementById('gameLengthSelect') as HTMLSelectElement)?.value;
+                        const body: any = {};
+                        if (difficulty && difficulty.trim() !== '') body.difficulty = difficulty;
+                        if (gameLength && gameLength.trim() !== '') body.gameLength = gameLength;
+                        if (Object.keys(body).length > 0) {
+                            console.log('[RemotePong] Applying room options', body);
+                            const resp = await postApiJson(`/game/${data.roomId}/speeds`, body);
+                            console.log('[RemotePong] Speeds POST status', resp.status);
+                        }
+                    } catch (e) {
+                        console.warn('Failed to apply room options for', data.roomId, e);
                     }
-                } catch (e) {
-                    console.warn('Failed to apply room options for', data.roomId, e);
+                    // After initializing and applying options, the room creator will automatically resume the game
+                    // so the match actually starts when both players are present.
+                    try {
+                        await postApi(`/game/${data.roomId}/resume`);
+                    } catch (e) {
+                        console.warn('Failed to auto-resume room', data.roomId, e);
+                    }
                 }
-            }
 
-            isGameRunning = false;
-            // Start 3-2-1 countdown then resume
-            import("../utils/countdown").then(mod => {
-                mod.runCountdown('countdown', 3).then(() => {
-                    postApi(`/game/${data.roomId}/resume`).catch(() => {});
-                });
+                isGameRunning = false;
+                // Don't start countdown here, wait for server "gameStarting" event
+                // The resume will be called after init, and server will emit gameStarting
             });
-        });
+        } else {
+            // For the second player, just wait for the game to start
+            isGameRunning = false;
+        }
     });
 
     socket.on("gameState", (state: GameState) => {
@@ -326,6 +391,15 @@ function startGame(roomIdToJoin: string) {
 
     socket.on("gamePaused", ({ paused }: { paused: boolean }) => {
         isGameRunning = !paused;
+    });
+
+    socket.on("gameStarting", () => {
+        // Start countdown for all players when game is about to start
+        import("../utils/countdown").then(mod => {
+            mod.runCountdown('countdown', 1).then(() => {
+                // Game will start automatically after countdown
+            });
+        });
     });
 
     socket.on("opponentDisconnected", () => {
