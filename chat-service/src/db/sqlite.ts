@@ -63,8 +63,7 @@ db.prepare(`
     message_type TEXT DEFAULT 'text', -- could be 'tournament', 'friend_request', 'chat_message', etc.
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     delivered_at DATETIME DEFAULT NULL,
-    read_at DATETIME DEFAULT NULL,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    read_at DATETIME DEFAULT NULL
   )
 `).run();
 
