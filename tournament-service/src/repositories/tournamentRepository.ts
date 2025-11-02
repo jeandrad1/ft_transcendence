@@ -98,7 +98,7 @@ export class TournamentRepository {
     }
 
     static updateCurrentTournamentPlayers(tournamentId: number, currentPlayers: number) {
-        const stmt = db.prepare(`UPDATE tournaments SET current_players = ?, updated_at = CURRENT_TIMESTAMP WHERE is = ?`);
+        const stmt = db.prepare(`UPDATE tournaments SET current_players = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`);
         stmt.run(currentPlayers, tournamentId);
     }
 
