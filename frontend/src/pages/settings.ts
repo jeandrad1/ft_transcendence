@@ -53,7 +53,7 @@ export function Settings() {
             <div class="settings-form-section">
               <p id="useremail">Email</p>
               <input type="text" id="newEmail" placeholder="Enter a new Email" />
-              <button type="button" id="changeUsernameBTN">Change Email</button>
+              <button type="button" id="changeEmailBTN">Change Email</button>
             </div>
     
           </div>
