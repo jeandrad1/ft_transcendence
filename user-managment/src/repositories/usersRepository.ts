@@ -80,7 +80,7 @@ export function removeInactiveUsers(inactiveDays : number) {
 		totalRemoved += removeUser(user.id);
 	}
 
-	console.log("Total of user deleting by inactivitie: ", totalRemoved);
+	console.log("Total inactive users removed: ", totalRemoved);
 }
 
 export function findAllUsers() {
