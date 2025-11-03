@@ -18,6 +18,7 @@ import { forgotPass } from "./pages/Login/forgotPass";
 import { ErrorPage } from "./pages/ErrorPage";
 import { TermsPage } from "./pages/TermsPage";
 import { privateRemotePongPage, privateRemotePongHandlers } from "./pages/privateRemotePong";
+import { setupSidebarTabs } from "./pages/Chat/chatNotifications";
 
 export function router(route: string): string {
     // for the roomid to be visible
@@ -45,11 +46,12 @@ export function router(route: string): string {
                 return Profile();
             }
             return Login();
-		case "#/profile/":
-        case route.match(/^#\/profile\/.+/)?.input || "":
-            setTimeout(profileHandlers, 0);
-            return Profile();
-
+        case route.match(/^#\/profile\/.+/)?.input:
+            if (isLoggedIn()) {
+                setTimeout(profileHandlers, 0);
+                return Profile();
+            }
+            return Login();
         case "#/about":
             return About();
         case "#/login":
@@ -71,6 +73,7 @@ export function router(route: string): string {
             case "#/chat":
                 if (isLoggedIn()) {
                     setTimeout(chatHandlers, 0);
+                    setTimeout(setupSidebarTabs, 0);
                     return Chat();
                 }
                 else {
@@ -102,6 +105,8 @@ export function router(route: string): string {
         case "#/tournament":
             return Tournament();
         case "#/":
+            return Home();
+        case "":
             return Home();
         default:
             return ErrorPage();
