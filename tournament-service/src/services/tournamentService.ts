@@ -101,18 +101,18 @@ export async function startRemoteTournament(tournamentId: number) {
     const player1 = players[i];
     const player2 = players[i + 1];
 
-    const matchId = TournamentRepository.addRemoteMatch(tournamentId, 1, player1.id, player2.id, null);
+    const matchId = TournamentRepository.addRemoteMatch(tournamentId, 1, player1.user_id, player2.user_id, null);
 
     matches.push({
       id: matchId,
-      player1_id: player1.id,
-      player2_id: player2.id,
+      player1_id: player1.user_id,
+      player2_id: player2.user_id,
       round: 1,
       status: "pending",
     });
 
-    await sendNotification(Number(player1.id), "You have a new match!", `You have a new match for the tournament ${tournament.name}! Good luck!!`);
-    await sendNotification(Number(player2.id), "You have a new match!", `You have a new match for the tournament ${tournament.name}! Good luck!!`);
+    await sendNotification(Number(player1.user_id), "You have a new match!", `You have a new match for the tournament ${tournament.name}! Good luck!!`);
+    await sendNotification(Number(player2.user_id), "You have a new match!", `You have a new match for the tournament ${tournament.name}! Good luck!!`);
   }
 
   TournamentRepository.updateStatus(tournamentId, "in_progress");
@@ -208,7 +208,6 @@ export async function advanceRemoteTournamentRound(tournamentId: number, winners
       round: nextRound,
       status: "pending",
     });
-
     await sendNotification(Number(player1.id), "You have a new match!", `You have a new match for the tournament ${tournament.name}! Good luck!!`);
     await sendNotification(Number(player2.id), "You have a new match!", `You have a new match for the tournament ${tournament.name}! Good luck!!`);
   }
