@@ -1,48 +1,3 @@
-export async function addFriend(friendId: number) {
-    const token = getAccessToken();
-    const userStr = localStorage.getItem('user');
-    let userId = null;
-    if (userStr) {
-        try {
-            const user = JSON.parse(userStr);
-            userId = user.id;
-        } catch {}
-    }
-    const res = await fetch(`http://${apiHost}:8080/users/addFriend`, {
-        method: 'POST',
-        headers: {
-            "Authorization": `Bearer ${token}`,
-            "Content-Type": "application/json",
-            ...(userId ? { "x-user-id": userId.toString() } : {})
-        },
-        body: JSON.stringify({ friendId: friendId.toString() })
-    });
-    if (!res.ok) throw new Error('Error al añadir amigo');
-    return await res.json();
-}
-
-export async function removeFriend(friendId: number) {
-    const token = getAccessToken();
-    const userStr = localStorage.getItem('user');
-    let userId = null;
-    if (userStr) {
-        try {
-            const user = JSON.parse(userStr);
-            userId = user.id;
-        } catch {}
-    }
-    const res = await fetch(`http://${apiHost}:8080/users/removeFriend`, {
-        method: 'POST',
-        headers: {
-            "Authorization": `Bearer ${token}`,
-            "Content-Type": "application/json",
-            ...(userId ? { "x-user-id": userId.toString() } : {})
-        },
-        body: JSON.stringify({ friendId: friendId.toString() })
-    });
-    if (!res.ok) throw new Error('Error al eliminar amigo');
-    return await res.json();
-}
 // Get user stats by ID (calls backend endpoint)
 export async function getUserStatsById(id: number): Promise<{victories: number, defeats: number} | null> {
     try {
@@ -140,20 +95,6 @@ export async function pingGateway(): Promise<string> {
 }
 
 // Functions for Chat-Service
-export async function getConversations() {
-    try {
-        const token = getAccessToken();
-        const res = await fetch(`http://${apiHost}:8080/conversations`, {
-            headers: { "Authorization": `Bearer ${token}` }
-        });
-        if (!res.ok) {
-            throw new Error(`HTTP error! Status: ${res.status}`);
-        }
-        return await res.json();
-    } catch (err) {
-        throw err;
-    }
-}
 
 export async function sendMessage(recipientId: number, content: string) {
     try {
@@ -239,7 +180,7 @@ export async function unblockUser(blockedUserId: number) {
 export async function sendGameInvitation(toUserId: number, gameType: string = 'pong') {
     try {
         const token = getAccessToken();
-        const res = await fetch(`http://${apiHost}:8080/game-invitations/send`, {
+        const res = await fetch(`http://${apiHost}:8080/conversations/game-invitations/send`, {
             method: 'POST',
             headers: { 
                 "Authorization": `Bearer ${token}`,
@@ -260,7 +201,7 @@ export async function sendGameInvitation(toUserId: number, gameType: string = 'p
 export async function getGameInvitations() {
     try {
         const token = getAccessToken();
-        const res = await fetch(`http://${apiHost}:8080/game-invitations/received`, {
+        const res = await fetch(`http://${apiHost}:8080/conversations/game-invitations/received`, {
             headers: { "Authorization": `Bearer ${token}` }
         });
         if (!res.ok) {
@@ -275,7 +216,7 @@ export async function getGameInvitations() {
 export async function getSentGameInvitations() {
     try {
         const token = getAccessToken();
-        const res = await fetch(`http://${apiHost}:8080/game-invitations/sent`, {
+        const res = await fetch(`http://${apiHost}:8080/conversations/game-invitations/sent`, {
             headers: { "Authorization": `Bearer ${token}` }
         });
         if (!res.ok) {
@@ -290,7 +231,7 @@ export async function getSentGameInvitations() {
 export async function acceptGameInvitation(invitationId: number) {
     try {
         const token = getAccessToken();
-        const res = await fetch(`http://${apiHost}:8080/game-invitations/${invitationId}/accept`, {
+        const res = await fetch(`http://${apiHost}:8080/conversations/game-invitations/${invitationId}/accept`, {
             method: 'POST',
             headers: { 
                 "Authorization": `Bearer ${token}`
@@ -314,7 +255,7 @@ export async function acceptGameInvitation(invitationId: number) {
 export async function rejectGameInvitation(invitationId: number) {
     try {
         const token = getAccessToken();
-        const res = await fetch(`http://${apiHost}:8080/game-invitations/${invitationId}/reject`, {
+        const res = await fetch(`http://${apiHost}:8080/conversations/game-invitations/${invitationId}/reject`, {
             method: 'POST',
             headers: { 
                 "Authorization": `Bearer ${token}`
@@ -346,21 +287,6 @@ export async function getUserProfile(userId: number) {
             throw new Error(`HTTP error! Status: ${res.status}`);
         }
         return await res.json();
-    } catch (err) {
-        throw err;
-    }
-}
-
-export async function searchUsersByUsername(query: string) {
-    try {
-        // Get all users and filter locally since backend doesn't have search endpoint
-        const response = await getAllUsers();
-        const allUsers = response.users || []; // Extract users array from response
-        const searchQuery = query.toLowerCase();
-        const filteredUsers = allUsers.filter((user: any) => 
-            user.username.toLowerCase().includes(searchQuery)
-        );
-        return filteredUsers;
     } catch (err) {
         throw err;
     }
