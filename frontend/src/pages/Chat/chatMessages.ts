@@ -7,6 +7,8 @@ import { loadConversationsDebounced } from "./chatConversations";
 
 const apiHost = `${window.location.hostname}`;
 
+const MAX_MESSAGE_LENGTH = 40;
+
 // Typing indicator state
 let typingTimeout: ReturnType<typeof setTimeout> | null = null;
 let isTyping = false;
@@ -115,6 +117,13 @@ export const handleMessageFormSubmit = async (e: Event) => {
         showErrorMessage(UI_MESSAGES.ENTER_MESSAGE, messageResult);
         return;
     }
+    
+    // Validate message length
+    if (content.length > MAX_MESSAGE_LENGTH) {
+        showErrorMessage(`El mensaje es demasiado largo (máximo ${MAX_MESSAGE_LENGTH} caracteres)`, messageResult);
+        return;
+    }
+    
     try {
         showInfoMessage(UI_MESSAGES.SENDING_MESSAGE, messageResult);
         // Send message via HTTP API (for persistence and WebSocket notification)
