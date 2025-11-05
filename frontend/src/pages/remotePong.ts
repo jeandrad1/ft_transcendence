@@ -460,6 +460,9 @@ function checkWinner() {
     const winnerSide = winner;
     if (playerRole === winnerSide) {
         sendVictoryToUserManagement().catch(err => console.error('Failed to send victory:', err));
+    } else {
+        // local player lost — record a defeat as well
+        sendDefeatToUserManagement().catch(err => console.error('Failed to send defeat:', err));
     }
     endGame();
 }
@@ -492,6 +495,35 @@ async function sendVictoryToUserManagement() {
         }
     } catch (err) {
         console.error("Error sending victory:", err);
+    }
+}
+
+async function sendDefeatToUserManagement() {
+    try {
+        let userId = getUserIdFromToken();
+        if (!userId) {
+            const userStr = localStorage.getItem("user");
+            if (!userStr) {
+                console.warn("No user id available (token/localStorage); cannot send defeat.");
+                return;
+            }
+            const user = JSON.parse(userStr);
+            userId = user?.id ?? user?.userId ?? null;
+        }
+        if (!userId) {
+            console.warn("Unable to resolve userId for defeat.");
+            return;
+        }
+
+        const res = await postApiJson(`/users/addDefeat`, { userId });
+        if (!res.ok) {
+            const text = await res.text();
+            console.error("Failed to post defeat:", res.status, text);
+        } else {
+            console.log(`Defeat recorded for user ${userId}`);
+        }
+    } catch (err) {
+        console.error("Error sending defeat:", err);
     }
 }
 
