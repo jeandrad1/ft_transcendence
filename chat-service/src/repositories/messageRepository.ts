@@ -50,16 +50,34 @@ export function getUnreadCount(user_id: number) {
 }
 
 export function updateMessageTypeByInvitation(invitationId: number, status: string) {
-    const stmt = db.prepare(`
-        SELECT message_id 
-        FROM invitations WHERE id = ?
-    `);
-    const messageId = stmt.run(invitationId);
+    try {
+        const stmt = db.prepare(`
+            SELECT message_id 
+            FROM invitations 
+            WHERE id = ?
+        `);
+        const row = stmt.get(invitationId);
 
-    const stmts = db.prepare(`
-        UPDATE messages
-        SET message_type = ?
-        WHERE id = ?
-    `);
-    stmts.run(status, messageId);
+        if (!row || typeof row.message_id === "undefined" || row.message_id === null) {
+            console.warn(`No message_id found for invitation ${invitationId}`);
+            return false;
+        }
+
+        const updateStmt = db.prepare(`
+            UPDATE messages
+            SET message_type = ?
+            WHERE id = ?
+        `);
+        const result = updateStmt.run(status, row.message_id);
+
+        if (result.changes === 0) {
+            console.warn(`No message updated for message_id ${row.message_id}`);
+            return false;
+        }
+
+        return true;
+    } catch (err) {
+        console.error(`updateMessageTypeByInvitation failed:`, err);
+        return false;
+    }
 }
