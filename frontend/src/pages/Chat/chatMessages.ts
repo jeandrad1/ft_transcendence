@@ -211,26 +211,41 @@ export function addMessageToUI(message: ChatMessage & { isSent: boolean }) {
             });
         }
     } else if (isFriendInvite) {
-    messageDiv.innerHTML = `
-      <div class="message-content">
-        🤝 Do you wanna be my friend? :)
-        <br>
-        <button class="join-remote-pong-btn accept-friend-btn">Add friend</button>
-        <button class="join-remote-pong-btn reject-friend-btn">Reject</button>
-      </div>
-      <div class="message-time">${time}</div>
-    `;
+        if (message.isSent === false) {
+            messageDiv.className = `message-bubble friend-invitation-received`;
+            messageDiv.innerHTML = `
+            <div class="message-content">
+                🤝 Do you wanna be my friend? :)
+                <br>
+                <button class="join-remote-pong-btn accept-friend-btn">Add friend</button>
+                <button class="join-remote-pong-btn reject-friend-btn">Reject</button>
+            </div>
+            <div class="message-time">${time}</div>
+            `;
 
-    const acceptBtn = messageDiv.querySelector('.accept-friend-btn') as HTMLElement;
-    const rejectBtn = messageDiv.querySelector('.reject-friend-btn') as HTMLElement;
+            const acceptBtn = messageDiv.querySelector('.accept-friend-btn') as HTMLElement;
+            const rejectBtn = messageDiv.querySelector('.reject-friend-btn') as HTMLElement;
+        
+            acceptBtn.addEventListener('click', async () => {
+            await acceptFriendInvitation();
+            });
+        
+            rejectBtn.addEventListener('click', async () => {
+            await rejectFriendInvitation();
+            });
 
-    acceptBtn.addEventListener('click', async () => {
-      await acceptFriendInvitation();
-    });
+        } else {
+            messageDiv.className = `message-bubble friend-invitation-sent`;
+            messageDiv.innerHTML = `
+            <div class="message-content">
+                🤝 Do you wanna be my friend? :)
+                <br>
+            </div>
+            <div class="message-time">${time}</div>
+            `;
+        }
 
-    rejectBtn.addEventListener('click', async () => {
-      await rejectFriendInvitation();
-    });
+
     } else {
         messageDiv.innerHTML = `
             <div class="message-content">${message.content}</div>
@@ -286,8 +301,9 @@ export function displayMessages(messages: any[]) {
             `;
         } else if (isFriendInvite) {
             // Render pong invitation message
+            if (!isSent) {
             messageHtml = `
-                <div class="message-bubble ${isSent ? 'message-sent' : 'message-received'} pong-invite">
+                <div class="message-bubble ${isSent ? 'friend-invitation-sent' : 'friend-invitation-received'} pong-invite">
                     <div class="message-content">
                         ${msg.content}
                         <br>
@@ -297,7 +313,19 @@ export function displayMessages(messages: any[]) {
                     <div class="message-time">${new Date(msg.timestamp || msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                 </div>
             `;
-    } else {
+            } else {
+                messageHtml = `
+                    <div class="message-bubble ${isSent ? 'friend-invitation-sent' : 'friend-invitation-received'} pong-invite">
+                        <div class="message-content">
+                            ${msg.content}
+                            <br>
+                        </div>
+                        <div class="message-time">${new Date(msg.timestamp || msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                    </div>
+                `;
+
+            }
+        } else {
             messageHtml = `
                 <div class="message-bubble ${isSent ? 'message-sent' : 'message-received'}">
                     <div class="message-content">${msg.content}</div>
