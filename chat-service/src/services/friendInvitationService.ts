@@ -1,5 +1,5 @@
 import * as blockRepo from "../repositories/blockRepository"
-import { createInvitation, getInvitationByUsers, updateInvitationStatus } from "../repositories/friendInvitationRepository";
+import { createInvitation, getInvitationByUsers, updateInvitationStatus, getInvitationByOtherUsers } from "../repositories/friendInvitationRepository";
 import { findConversation, createConversation } from "../repositories/conversationRepository";
 import { createMessage, updateMessageTypeByInvitation } from "../repositories/messageRepository";
 import * as websocketService from "../services/websocketService";
@@ -75,50 +75,120 @@ export async function createFriendInvitation(userId: number, otherUserId: number
 
 export async function setNewFriend(userId: number, otherUserId: number) {
     
-    const res = fetch(`http://user-management-service:8082/addFriend`, {
+    const res = await fetch(`http://user-management-service:8082/addFriend`, {
         method: "POST",
         headers: { "Content-Type": "application/json",
                     "x-user-id": `${userId}`,
          },
         body: JSON.stringify({ friendId: otherUserId })
     })
+    return res.ok;
 }
 
 export async function acceptFriendInvitation(userId: number, otherUserId: number) {
-
-    const invitation = getInvitationByUsers(userId, otherUserId);
-    
-    if (!invitation) {
-        throw new Error("Invitation not found");
-    }
-
-    if (invitation.status !== 'pending') {
-        throw new Error("Invitation has expired");
-    }
-
-    await updateInvitationStatus(invitation.id, 'accepted');
-    updateMessageTypeByInvitation(invitation.id, 'friend-invite-accepted');
-
     try {
-        const acceptanceData = {
-            invitation_id: invitation.id,
-            user_id: invitation.user_id,
-            other_user_id: userId,
+
+        if (!userId || !otherUserId) {
+            throw new Error("Missing user IDs");
+        }
+        if (userId === otherUserId) {
+            throw new Error("Cannot accept your own invitation");
+        }
+
+        const invitation = await getInvitationByOtherUsers(userId, otherUserId);
+        if (!invitation) {
+            throw new Error("Invitation not found");
+        }
+
+        if (invitation.status !== 'pending') {
+            throw new Error(`Cannot accept invitation: current status is '${invitation.status}'`);
+        }
+
+        updateInvitationStatus(invitation.id, 'accepted');
+
+        updateMessageTypeByInvitation(invitation.id, 'friend-invite-accepted');
+
+        try {
+            const acceptanceData = {
+                invitation_id: invitation.id,
+                user_id: invitation.user_id,
+                other_user_id: userId,
+                type: invitation.type,
+                room_id: invitation.room_id || null
+            };
+            // Uncomment if your WS service is ready:
+            // websocketService.notifyFriendInvitationAccepted(invitation.user_id, acceptanceData);
+            console.log(`🤝 Friend invitation ${invitation.id} accepted by user ${userId}`);
+        } catch (wsError) {
+            console.warn(`⚠️ Failed to send WebSocket notification:`, wsError);
+        }
+
+        return { 
+            success: true, 
+            message: "Invitation accepted successfully",
             type: invitation.type,
+            opponentId: invitation.user_id,
             room_id: invitation.room_id || null
         };
-
-        //websocketService.notifyFriendInvitationAccepted(invitation.user_id, acceptanceData);
-        console.log(` Friend invitation ${invitation.id} accepted by user ${userId}`);
-    } catch (wsError) {
-        console.warn(`Failed to send acceptance notification:`, wsError);
+    } catch (err: any) {
+        console.error(`❌ acceptFriendInvitation error:`, err);
+        return { 
+            success: false, 
+            message: err.message || "Unexpected error while accepting invitation"
+        };
     }
+}
 
-    return { 
-        success: true, 
-        message: "Invitation accepted",
-        type: invitation.type,
-        opponentId: invitation.user_id,
-        room_id: invitation.room_id || null
-    };
+export async function rejectFriendInvitation(userId: number, otherUserId: number) {
+    try {
+
+        if (!userId || !otherUserId) {
+            throw new Error("Missing user IDs");
+        }
+        if (userId === otherUserId) {
+            throw new Error("Cannot reject your own invitation");
+        }
+
+        const invitation = await getInvitationByOtherUsers(userId, otherUserId);
+        if (!invitation) {
+            throw new Error("Invitation not found");
+        }
+
+        if (invitation.status !== 'pending') {
+            throw new Error(`Cannot reject invitation: current status is '${invitation.status}'`);
+        }
+
+        updateInvitationStatus(invitation.id, 'rejected');
+
+        updateMessageTypeByInvitation(invitation.id, 'friend-invite-rejected');
+
+        try {
+            const rejectionData = {
+                invitation_id: invitation.id,
+                user_id: invitation.user_id,
+                other_user_id: userId,
+                type: invitation.type,
+                room_id: invitation.room_id || null
+            };
+            // Uncomment if your WS service is ready:
+            // websocketService.notifyFriendInvitationAccepted(invitation.user_id, acceptanceData);
+            console.log(`🤝 Friend invitation ${invitation.id} rejected by user ${userId}`);
+        } catch (wsError) {
+            console.warn(`⚠️ Failed to send WebSocket notification:`, wsError);
+        }
+
+        return { 
+            success: true, 
+            message: "Invitation rejected successfully",
+            type: invitation.type,
+            opponentId: invitation.user_id,
+            room_id: invitation.room_id || null
+        };
+    } catch (err: any) {
+        console.error(`❌ rejectFriendInvitation error:`, err);
+        return { 
+            success: false, 
+            message: err.message || "Unexpected error while rejecting invitation"
+        };
+    }
 }
