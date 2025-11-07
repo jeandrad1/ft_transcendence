@@ -22,10 +22,10 @@ export async function acceptFriendInvitationController(req: FastifyRequest, repl
     const userId = req.headers["x-user-id"];
 
     try {
-        const res = await acceptFriendInvitation(userId, Number(otherUserId));
+        const res = await acceptFriendInvitation(Number(userId), Number(otherUserId));
 
         if (res.success && res.success === true ) {
-            const response = await setNewFriend(userId, Number(otherUserId));
+            const response = await setNewFriend(Number(userId), Number(otherUserId));
 
         }
         reply.code(200).send({ success: true });
@@ -39,7 +39,7 @@ export async function rejectFriendInvitationController(req: FastifyRequest, repl
     const userId = req.headers["x-user-id"];
 
     try {
-        const res = await rejectFriendInvitation(userId, Number(otherUserId));
+        const res = await rejectFriendInvitation(Number(userId), Number(otherUserId));
 
         reply.code(200).send({ success: true });
     } catch (err: any) {
