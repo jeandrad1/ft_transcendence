@@ -15,8 +15,14 @@ export function createInvitation(userId: number, otherUserId: number, type: stri
 }
 
 export function getInvitationByUsers(userId: number, otherUserId: number) {
-    const stmt = db.prepare("SELECT * FROM invitations WHERE user_id = ? AND other_user_id = ? AND type = ?");
+    const stmt = db.prepare("SELECT * FROM invitations WHERE user_id = ? AND other_user_id = ? AND type = ? AND status IN ('pending', 'accepted')");
     const result = stmt.get(userId, otherUserId, "friend");
+    return result;
+}
+
+export function getInvitationByOtherUsers(userId: number, otherUserId: number) {
+    const stmt = db.prepare("SELECT * FROM invitations WHERE user_id = ? AND other_user_id = ? AND type = ? AND status IN ('pending', 'accepted')");
+    const result = stmt.get(otherUserId, userId, "friend");
     return result;
 }
 
