@@ -6,6 +6,10 @@ import { getConnectedUsersSet, getActiveConversationId } from "./chatState";
 import { handleUserSearch } from "./chatUserSearch";
 
 function handleIncomingMessage(message: ChatMessage) {
+    const conversationId = getActiveConversationId();
+    if (!conversationId)
+        return ;
+    
     try {
         if (message.type === 'message' && message.data && message.data.event_type === 'game_invitation_accepted') {
             // If acceptance contains a room_id, redirect to private remote pong
