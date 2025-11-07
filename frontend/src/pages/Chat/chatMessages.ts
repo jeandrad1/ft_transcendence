@@ -228,10 +228,26 @@ export function addMessageToUI(message: ChatMessage & { isSent: boolean }) {
         
             acceptBtn.addEventListener('click', async () => {
             await acceptFriendInvitation();
+                const friendBtn = document.getElementById('invite-friend-btn') as HTMLButtonElement;
+
+                if (friendBtn) {
+                    friendBtn.style.display = 'none';
+
+                    messageDiv.className = `message-bubble friend-invitation-received`;
+                    messageDiv.innerHTML = `
+                    <div class="message-content">
+                        Do you wanna be my friend? :)
+                        <br>
+                        <div class='friend-action-result'>✅ Friend accepted</div>
+                    </div>
+                    <div class="message-time">${time}</div>
+                    `;
+                }
             });
         
             rejectBtn.addEventListener('click', async () => {
             await rejectFriendInvitation();
+            messageDiv.className = `message-bubble friend-invitation-received-rejected`;
             });
 
         } else {
@@ -281,6 +297,10 @@ export function displayMessages(messages: any[]) {
         // Detect friend invitation
         const isFriendInvite = (msg.data && msg.data.event_type === 'friend_invitation_message')
             || msg.message_type === 'friend-invite';
+        const isFriendInviteAccepted = (msg.data && msg.data.event_type === 'friend_invitation_message')
+            || msg.message_type === 'friend-invite-accepted';
+        const isFriendInviteRejected = (msg.data && msg.data.event_type === 'friend_invitation_message')
+            || msg.message_type === 'friend-invite-rejected';
         let messageHtml = '';
         if (isPongInvite) {
             let room = (msg.data && msg.data.room_id) || (msg.content && (msg.content.match(/<b>([^<]+)<\/b>/) || [])[1]) || '';
@@ -324,8 +344,33 @@ export function displayMessages(messages: any[]) {
                     </div>
                 `;
 
-            }
-        } else {
+            }         
+        } else if (isFriendInviteAccepted) {
+            // Render pong invitation message
+            messageHtml = `
+                <div class="message-bubble ${isSent ? 'friend-invitation-sent' : 'friend-invitation-received'} pong-invite">
+                    <div class="message-content">
+                        ${msg.content}
+                        <br>
+                        <div class='friend-action-result'>✅ Friend accepted</div>
+                    </div>
+                    <div class="message-time">${new Date(msg.timestamp || msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                </div>
+            `;
+        } else if (isFriendInviteRejected) {
+            // Render pong invitation message
+            messageHtml = `
+                <div class="message-bubble ${isSent ? 'friend-invitation-sent-rejected' : 'friend-invitation-received-rejected'} pong-invite">
+                    <div class="message-content">
+                        ${msg.content}
+                        <br>
+                       <div class='friend-action-result'>❌ Friend request rejected</div>
+                    </div>
+                    <div class="message-time">${new Date(msg.timestamp || msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                </div>
+            `;
+        }
+        else {
             messageHtml = `
                 <div class="message-bubble ${isSent ? 'message-sent' : 'message-received'}">
                     <div class="message-content">${msg.content}</div>
