@@ -34,11 +34,11 @@ export function gameStatsHandlers(accessToken: string) {
   (async () => {
     const container = document.getElementById('game-stats-content');
     if (!container) return;
-    container.innerHTML = 'Cargando partida...';
+    container.innerHTML = 'Loading match...';
 
     const matchId = getMatchIdFromUrl();
     if (!matchId) {
-      container.innerHTML = `<span style="color:red">Match id inválido en la URL</span>`;
+      container.innerHTML = `<span style="color:red">Invalid match ID in URL</span>`;
       return;
     }
 
@@ -161,8 +161,7 @@ export function gameStatsHandlers(accessToken: string) {
         </div>
       `;
     } catch (err: any) {
-      console.error(err);
-      container.innerHTML = `<span style="color:red">Error cargando la partida: ${err.message ?? err}</span>`;
+      container.innerHTML = `<span style="color:red">Error loading match: ${err.message ?? err}</span>`;
     }
   })();
 }

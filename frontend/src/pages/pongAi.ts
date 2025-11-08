@@ -5,13 +5,13 @@
 import { io, Socket } from "socket.io-client";
 import { getAccessToken, refreshAccessToken } from "../state/authState";
 
-// COPIADO DE PONG.TS (con pequeñas modificaciones)
+// COPIED FROM PONG.TS (with minor modifications)
 
 let socket: Socket;
 let ctx: CanvasRenderingContext2D | null = null;
 let animationFrameId: number;
 let isGameRunning = false;
-let playerRole: "left" | "right" = "left"; // El jugador siempre es 'left'
+let playerRole: "left" | "right" = "left"; // Player is always 'left'
 let roomId = "";
 let aiStarted = false;
 let handleVisibility: () => void = () => {};
@@ -113,7 +113,7 @@ const handleKeyUp = (e: KeyboardEvent) => keysPressed.delete(e.key);
 
 function gameLoop() {
     if (socket && isGameRunning) {
-        // El jugador siempre controla la pala izquierda
+    // Player always controls the left paddle
         if (keysPressed.has("w") || keysPressed.has("ArrowUp")) {
             socket.emit("moveUp", "left", roomId);
         }

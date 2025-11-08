@@ -42,7 +42,7 @@ async function startLocalCountdownAndStart(roomToStart: string, isAiMode: boolea
     isGameRunning = true;
     console.log("[LocalPowerUpPong] Game started and resumed after countdown.");
 
-    // Habilita los botones de nuevo tras iniciar
+    // Re-enable buttons after starting
     if (btn1v1) btn1v1.disabled = false;
     if (btn1vAI) btn1vAI.disabled = false;
 
@@ -118,17 +118,17 @@ export function localPowerUpPongPage(): string {
                                             </select>
                                         </label>
 
-                                        <!-- Nuevo desplegable para el power-up (misma apariencia que los otros) -->
-                                        <label>Power-Up Velocidad:
-                                            <select id="powerupSelect" aria-label="Powerup Velocidad">
-                                                <option value="false">Desactivado</option>
-                                                <option value="true">Activado</option>
+                                        <!-- New dropdown for the power-up (same style as the others) -->
+                                        <label>Speed Power-Up:
+                                            <select id="powerupSelect" aria-label="Speed Power-Up">
+                                                <option value="false">Disabled</option>
+                                                <option value="true">Enabled</option>
                                             </select>
                                         </label>
                                 </div>
                 <button id="1v1Btn" class="pong-button">1 vs 1</button>
                 <button id="1vAIBtn" class="pong-button">1 vs AI</button>
-                <button id="activateSpeedBtn" class="pong-button">Activar Power-Up Velocidad</button>
+                <button id="activateSpeedBtn" class="pong-button">Activate Speed Power-Up</button>
             </div>
       <div id="roleInfo"></div>
 
@@ -179,7 +179,7 @@ function cleanup() {
     isGameRunning = false;
     keysPressed.clear();
     ctx = null;
-    // Oculta el mensaje de victoria y error inmediatamente
+    // Hide winner and error
     const winnerMsg = document.getElementById("winnerMessage");
     if (winnerMsg) winnerMsg.style.display = "none";
     const errorMsg = document.getElementById("errorMessage");
@@ -293,7 +293,7 @@ export function localPowerUpPongHandlers() {
         startGame(true);
     });
 
-    // Nuevo: sincronizar/select para power-up y hacer toggle con el botón
+    // New: sync power-up select and toggle via button
     const powerupSelect = document.getElementById("powerupSelect") as HTMLSelectElement | null;
     const activateBtn = document.getElementById("activateSpeedBtn") as HTMLButtonElement | null;
 
@@ -301,7 +301,7 @@ export function localPowerUpPongHandlers() {
       const reflectBtnLabel = () => {
         const enabled = powerupSelect.value === "true";
         if (activateBtn) {
-          activateBtn.textContent = enabled ? "Power-Up: ACTIVADO" : "Activar Power-Up Velocidad";
+          activateBtn.textContent = enabled ? "Power-Up: ENABLED" : "Activate Speed Power-Up";
           activateBtn.classList.toggle("active-powerup", enabled);
         }
       };
@@ -319,14 +319,14 @@ export function localPowerUpPongHandlers() {
                             try {
                                 await postGame(`/game/${roomId}/powerup?enabled=${desiredPowerUpEnabled}&random=${desiredPowerUpRandom}`);
                             } catch (err) {
-                                console.warn("[LocalPowerUpPong] No se pudo cambiar powerup:", err);
+                                console.warn("[LocalPowerUpPong] Failed to change power-up:", err);
                             }
                         } else {
                             console.log('[LocalPowerUpPong] Powerup selection saved locally; will apply on game start.');
                         }
                     });
 
-      // el botón hace toggle en el desplegable para UX rápida
+      // button toggles the select for quick UX
       if (activateBtn) {
         activateBtn.addEventListener("click", () => {
           powerupSelect.value = powerupSelect.value === "true" ? "false" : "true";
@@ -343,7 +343,7 @@ async function startGame(isAiMode: boolean) {
     // Ensure everything is clean before starting
     cleanup();
 
-    // Deshabilita los botones para evitar doble inicio
+    // Disable buttons to prevent double start
     const btn1v1 = document.getElementById("1v1Btn") as HTMLButtonElement;
     const btn1vAI = document.getElementById("1vAIBtn") as HTMLButtonElement;
     if (btn1v1) btn1v1.disabled = true;
@@ -352,7 +352,7 @@ async function startGame(isAiMode: boolean) {
     ctx = (document.getElementById("pongCanvas") as HTMLCanvasElement).getContext("2d")!;
     const wsHost = `ws://${window.location.hostname}:7000`;
     if (socket) {
-        // Si por alguna razón hay un socket anterior, límpialo
+        // If there’s a previous socket, clean it up
         cleanup();
     }
     socket = io(wsHost, { 
@@ -407,7 +407,7 @@ async function startGame(isAiMode: boolean) {
                     isGameRunning = true;
                     console.log("[LocalPowerUpPong] Game started and resumed after countdown.");
 
-                    // Habilita los botones de nuevo tras iniciar
+                    // Re-enable buttons after starting
                     if (btn1v1) btn1v1.disabled = false;
                     if (btn1vAI) btn1vAI.disabled = false;
 
@@ -420,10 +420,10 @@ async function startGame(isAiMode: boolean) {
             console.error("[LocalPowerUpPong] Failed to start game:", error);
             const errorMsg = document.getElementById("errorMessage");
             if (errorMsg) {
-                errorMsg.textContent = error?.message || "Error al iniciar la partida";
+                errorMsg.textContent = error?.message || "Error starting the game";
                 errorMsg.style.display = "block";
             }
-            // Habilita los botones para reintentar
+            // Re-enable buttons to retry
             if (btn1v1) btn1v1.disabled = false;
             if (btn1vAI) btn1vAI.disabled = false;
         }
@@ -440,7 +440,7 @@ async function startGame(isAiMode: boolean) {
     socket!.on('roomFull', (payload: { roomId: string }) => {
         const errorMsg = document.getElementById("errorMessage");
         if (errorMsg) {
-            errorMsg.textContent = 'La sala local está llena. Intenta más tarde o usa el modo remoto.';
+            errorMsg.textContent = 'The local room is full. Try again later or use remote mode.';
             errorMsg.style.display = "block";
         }
         console.warn('Attempted to join full local room', payload);
@@ -450,7 +450,7 @@ async function startGame(isAiMode: boolean) {
     socket!.on('roomNotFound', (payload: { roomId: string }) => {
         const errorMsg = document.getElementById("errorMessage");
         if (errorMsg) {
-            errorMsg.textContent = 'La sala de juego ya no existe o ha sido eliminada. Se reiniciará la partida.';
+            errorMsg.textContent = 'The game room no longer exists or has been removed. The game will restart.';
             errorMsg.style.display = "block";
         }
         cleanup();
@@ -462,21 +462,21 @@ async function startGame(isAiMode: boolean) {
         isGameRunning = false;
         const errorMsg = document.getElementById("errorMessage");
         if (errorMsg) {
-            errorMsg.textContent = 'Conexión perdida con el servidor. La partida se reiniciará.';
+            errorMsg.textContent = 'Lost connection to the server. The game will restart.';
             errorMsg.style.display = "block";
         }
         cleanup();
         setTimeout(() => window.location.reload(), 2000);
     });
 
-    // Manejo de reconexión automática: reinicia la UI si socket.io reconecta
+    // Automatic reconnection handling: reset the UI if socket.io reconnects
     if (typeof window !== 'undefined') {
         window.addEventListener('DOMContentLoaded', () => {
             if (socket) {
                 socket.on('reconnect', () => {
                     const errorMsg = document.getElementById("errorMessage");
                     if (errorMsg) {
-                        errorMsg.textContent = 'Reconectando con el servidor. La partida se reiniciará.';
+                        errorMsg.textContent = 'Reconnecting to the server. The game will restart.';
                         errorMsg.style.display = "block";
                     }
                     cleanup();
@@ -525,11 +525,11 @@ function endGame() {
 function draw() {
     if (!ctx) return;
 
-    // Fondo
+    // Background
     ctx.fillStyle = "#000";
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-    // Línea central
+    // Center line
     ctx.strokeStyle = "#FFF";
     ctx.setLineDash([10, 5]);
     ctx.beginPath();
@@ -538,13 +538,13 @@ function draw() {
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // Pala izquierda
+    // Left paddle
     ctx.shadowColor = "#42F3FA";
     ctx.shadowBlur = 15;
     ctx.fillStyle = "#42F3FA";
     ctx.fillRect(PADDLE_OFFSET_X, gameState.paddles.left.y, PADDLE_WIDTH, PADDLE_HEIGHT);
 
-    // Pala derecha
+    // Right paddle
     ctx.shadowColor = "#FE92FD";
     ctx.shadowBlur = 15;
     ctx.fillStyle = "#FE92FD";
@@ -552,7 +552,7 @@ function draw() {
     
     ctx.shadowBlur = 0;
     
-    // Bola
+    // Ball
     if (!gameState.gameEnded) {
         ctx.shadowColor = "#ffffff";
         ctx.shadowBlur = 10;
@@ -562,7 +562,7 @@ function draw() {
         ctx.fill();
     }
 
-    // Puntuación
+    // Score
     ctx.shadowBlur = 0;
     const scoreboard = document.getElementById("scoreboard");
     if (scoreboard) {
