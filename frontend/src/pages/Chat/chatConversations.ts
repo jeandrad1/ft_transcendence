@@ -112,7 +112,7 @@ export async function selectConversation(otherUserId: number, otherUserName: str
     // Charge indicator display
     const messagesContainer = document.getElementById('messages-container');
     if (messagesContainer) {
-        messagesContainer.innerHTML = '<div class="loading">Cargando mensajes...</div>';
+        messagesContainer.innerHTML = '<div class="loading">Loading messages...</div>';
     }
 
     try {
@@ -120,7 +120,7 @@ export async function selectConversation(otherUserId: number, otherUserName: str
         displayMessages(result.messages || []);
     } catch (err) {
         if (messagesContainer) {
-            messagesContainer.innerHTML = '<div class="error">Error cargando mensajes</div>';
+            messagesContainer.innerHTML = '<div class="error">Error loading messages</div>';
         }
     }
 }

@@ -58,7 +58,7 @@ export async function chatHandlers() {
             loadConversationsAuto();
         });
 
-    // Eliminar el listener previo antes de añadirlo
+    // Remove previous listener before adding a new one
     messageForm.removeEventListener('submit', handleMessageFormSubmit);
     messageForm.addEventListener('submit', handleMessageFormSubmit);
 
@@ -184,7 +184,6 @@ export async function chatHandlers() {
                 const check = await checkAlreadyFriend();
 
                 if (check) {
-                    console.log("Entra en check");
                     return ;
                 }
 
