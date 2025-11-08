@@ -6,7 +6,7 @@ export function Home(): string {
         <div class="text-content">
           <h2>The 42 Common Core</h2>
           <p>
-            Composed by 23 projects and 5 exams.  
+            Composed of 23 projects and 5 exams.  
           </p>
           <p>
             It emphasizes peer learning, creativity, and real-world collaboration — preparing students to tackle complex software challenges independently.
@@ -21,7 +21,7 @@ export function Home(): string {
       <div class="text-content">
         <h2>Piscine October 2023</h2>
           <p>
-            It began on September 18th, 2023, and was composed of 155 people, of whom 90 became students.          </p>
+            It began on September 18th, 2023, and included 155 people, of whom 90 became students.          </p>
           <p>
             Saroca-f and Schamizo are from this piscine. They met on the first day because they sat in the same cluster row.
             Two years later, they are still friends.
@@ -34,7 +34,7 @@ export function Home(): string {
         <div class="text-content">
           <h2>Piscine November 2023</h2>
           <p>
-            It began on October 23th, 2023, and was composed of 189 people, of whom only 100 became students.          </p>
+            It began on October 23th, 2023, and included 189 people, of whom only 100 became students.          </p>
           </p>
           <p>
 Jeandrad and Pablogon are from this piscine. Like the October piscine, they started as students on November 27th.          </p>
@@ -45,9 +45,9 @@ Jeandrad and Pablogon are from this piscine. Like the October piscine, they star
       <div class="section right-image">
       <div class="image-content cards-image"></div>
       <div class="text-content">
-        <h2>The past of the time</h2>
+        <h2>The Passage of Time</h2>
           <p>
-            We can see it in our student cards, but also feel it in ourselfs.
+            We can see it in our student cards, but also feel it in ourselves.
           </p>
           <p>
             Together, the four of us have logged over 10,000 hours coding on 42's computers.
