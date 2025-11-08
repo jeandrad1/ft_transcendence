@@ -160,7 +160,7 @@ export async function selectNotification(notificationId: number, title: string) 
     const contactName = document.getElementById('contact-name');
     if (contactName) contactName.textContent = title;
 
-    // Actualizar el estado online/offline dinámicamente
+    // Update online/offline status dynamically
     const contactStatus = document.getElementById('contact-status');
     if (contactStatus) {
         contactStatus.style.display = 'none';
