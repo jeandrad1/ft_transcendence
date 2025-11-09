@@ -3,7 +3,7 @@ services:
   nginx:
     build: ./nginx
     ports:
-      - "8000:8000"
+      - "8443:8443"
     depends_on:
       - frontend-dev
       - gateway
@@ -27,8 +27,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    ports:
-      - "5173:5173"
+    expose:
+      - "5173"
     volumes:
       - frontend_dist:/app/dist
     depends_on:
@@ -38,8 +38,8 @@ services:
 
   gateway:
     build: ./gateway
-    ports:
-      - "8080:8080"
+    expose:
+      - "8080"
     env_file:
       - ./gateway/.env
     depends_on:
