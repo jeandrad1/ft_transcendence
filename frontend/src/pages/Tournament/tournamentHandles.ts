@@ -420,15 +420,25 @@ export async function tournamentHandlers() {
         {
             tournamentPlayers = 4;
             const name = (document.querySelector<HTMLInputElement>("#tournamentName"));
-            if (name?.value)
+            if (name?.value) {
+                if (name.value.length > 30) {
+                    alert("Tournament name cannot exceed 30 characters");
+                    return;
+                }
                 tournamentName = name.value;
+            }
             setTournamentContent(getTournamentAliasFourHtml());
         }
         else {
             tournamentPlayers = 4;
             const name = (document.querySelector<HTMLInputElement>("#tournamentName"));
-            if (name?.value)
+            if (name?.value) {
+                if (name.value.length > 30) {
+                    alert("Tournament name cannot exceed 30 characters");
+                    return;
+                }
                 tournamentName = name.value;
+            }
             currentTournamentId = await createRemoteTournament(tournamentName, tournamentPlayers);
             const html = await getTournamentLobbyHTML(currentTournamentId)
             setTournamentContent(html);

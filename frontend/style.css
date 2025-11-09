@@ -3912,6 +3912,10 @@ header {
   font-size: 1rem;
   font-weight: bold;
   color: #ffffff;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .tournaments-list {
@@ -4020,6 +4024,13 @@ header {
   box-shadow: 0 0 6px rgba(255, 255, 255, 0.6);
 }
 
+.tournament-name-hint {
+  font-size: 0.85rem;
+  color: #999;
+  margin-top: -10px;
+  font-style: italic;
+}
+
 .lobby-container {
   background-color: #1b1e2b;
   color: white;
@@ -4030,6 +4041,15 @@ header {
   box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
   text-align: center;
   font-family: 'Poppins', sans-serif;
+}
+
+.lobby-container #tournament-name strong {
+  display: inline-block;
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
 }
 
 .lobby-players {

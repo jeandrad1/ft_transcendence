@@ -83,11 +83,14 @@ export function getTournamentPlayersHtml(): string {
       id="tournamentName"
       class="tournament-input"
       placeholder="Enter tournament name..."
+      maxlength="30"
+      required
     />
   </div>
       <div class="players-buttons">
         <button id="fourPlayerBtn" class="tournament-button">4 Players</button>
       </div>
+      <p class="tournament-name-hint">Maximum 30 characters</p>
     </div>
     `;
 }

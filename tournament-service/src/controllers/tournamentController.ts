@@ -29,6 +29,14 @@ export async function createLocalTournamentController(req: FastifyRequest, reply
     try {
         const { tournamentName, tournamentPlayers, playerOne, playerTwo, playerThree, playerFour } = req.body as any;
 
+        // Validate tournament name length
+        if (!tournamentName || typeof tournamentName !== 'string') {
+            return reply.code(400).send({ error: "Tournament name is required" });
+        }
+        if (tournamentName.length > 30) {
+            return reply.code(400).send({ error: "Tournament name cannot exceed 30 characters" });
+        }
+
         const newTournament = await TournamentService.createLocalTournament({
             name: tournamentName,
             maxPlayers: tournamentPlayers,
@@ -97,6 +105,14 @@ export async function createRemoteTournamentController(req: FastifyRequest, repl
         }
 
         const { tournamentName, tournamentPlayers } = req.body as any;
+
+        // Validate tournament name length
+        if (!tournamentName || typeof tournamentName !== 'string') {
+            return reply.code(400).send({ error: "Tournament name is required" });
+        }
+        if (tournamentName.length > 30) {
+            return reply.code(400).send({ error: "Tournament name cannot exceed 30 characters" });
+        }
 
         const newTournament = await TournamentService.createRemoteTournament({
             name: tournamentName,
