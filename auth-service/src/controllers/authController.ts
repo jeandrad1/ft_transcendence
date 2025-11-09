@@ -33,9 +33,9 @@ export async function loginController(req: FastifyRequest, reply: FastifyReply) 
 
         reply.setCookie("refreshToken", refreshToken, {
             httpOnly: true,
-            secure: false, //Change in future to true
-            sameSite: "lax", //Change in future to strict
-            path: "/auth/refresh",
+            secure: true, //Change in future to true
+            sameSite: "none", //Change in future to strict
+            path: "/",
             maxAge: 7 * 24 * 60 * 60,
         });
 
@@ -59,9 +59,9 @@ export async function refreshController(req: FastifyRequest, reply: FastifyReply
 
         reply.setCookie("refreshToken", newRefreshToken, {
             httpOnly: true,
-            secure: false, //Change in future to true
-            sameSite: "lax", //Change in future to strict
-            path: "/auth/refresh",
+            secure: true, //Change in future to true
+            sameSite: "none", //Change in future to strict
+            path: "/",
             maxAge: 7 * 24 * 60 * 60
         });
 
@@ -142,9 +142,9 @@ export async function verify2FAController(req: FastifyRequest, reply: FastifyRep
     
     reply.setCookie("refreshToken", refreshToken, {
         httpOnly: true,
-        secure: false, //Change in future to true
-        sameSite: "lax", //Change in future to strict
-        path: "/auth/refresh",
+        secure: true, //Change in future to true
+        sameSite: "none", //Change in future to strict
+        path: "/",
         maxAge: 7 * 24 * 60 * 60,
     });
     

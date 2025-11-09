@@ -84,9 +84,9 @@ export async function callback42Controller(req: FastifyRequest, reply: FastifyRe
 
         reply.setCookie("refreshToken", refreshToken, {
             httpOnly: true,
-            secure: false,
-            sameSite: "lax",
-            path: "/auth/refresh",
+            secure: true,
+            sameSite: "none",
+            path: "/",
             maxAge: 7 * 24 * 60 * 60,
         });
 
@@ -179,9 +179,9 @@ export async function callbackGoogleController(req: FastifyRequest, reply: Fasti
 
         reply.setCookie("refreshToken", refreshToken, {
             httpOnly: true,
-            secure: false,
-            sameSite: "lax",
-            path: "/auth/refresh",
+            secure: true,
+            sameSite: "none",
+            path: "/",
             maxAge: 7 * 24 * 60 * 60,
         });
 
