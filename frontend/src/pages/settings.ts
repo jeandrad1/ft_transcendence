@@ -308,15 +308,12 @@ export function settingsHandlers(accessToken: string) {
       });
       const data = await res.json();
       if (res.ok) {
-        console.log("Password changed successfully");
         location.reload();
       }
       else {
-        console.error("Error changing password:", data.error);
       }
     }
     catch (err) {
-      console.error("⚠️ Failed to reach server", err);
     }
   });
 
@@ -359,12 +356,6 @@ export function settingsHandlers(accessToken: string) {
         },
         body: formData,
       });
-      const data = await res.json();
-      if (res.ok) {
-        console.log("Avatar changed successfully");
-      } else {
-        console.error("Error changing avatar:", data.error);
-      }
     } 
     catch (err) {
       console.error("⚠️ Failed to reach server", err);
@@ -385,17 +376,12 @@ export function settingsHandlers(accessToken: string) {
       });
       const data = await res.json();
       if (res.ok) {
-        console.log("User delete successfully");
         logoutOutsideLoginPage();
 /*         logout();
         location.hash = "/#login"; */
       }
-      else {
-        console.log("Error deleting user:", data.error)
-      }
     }
     catch (err) {
-      console.error("⚠️ Failed to reach server", err);
     }
   });
 }

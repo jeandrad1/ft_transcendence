@@ -60,16 +60,12 @@ function parseUsernameFromHash(): string | null {
 
 /** Attempt to resolve the username of the logged-in user by various means. */
 async function resolveCurrentUsername(): Promise<string | null> {
-  console.log('[profile] resolveCurrentUsername: start');
 
   // 1) api.getCurrentUser() if it exists
   try {
     if (typeof (api as any).getCurrentUser === 'function') {
-      console.log('[profile] resolveCurrentUsername: calling api.getCurrentUser()');
       const cu = await (api as any).getCurrentUser();
-      console.log('[profile] resolveCurrentUsername: api.getCurrentUser ->', cu);
       if (cu && cu.username) {
-        console.log('[profile] resolveCurrentUsername: got username from api.getCurrentUser', cu.username);
         return cu.username;
       }
     }
@@ -80,19 +76,12 @@ async function resolveCurrentUsername(): Promise<string | null> {
   // 2) Try /users/me directly (gateway -> user-management-service)
   try {
     const token = getAccessToken();
-    console.log('[profile] resolveCurrentUsername: token present?', !!token);
     const headers: Record<string,string> = {};
     if (token) headers['Authorization'] = `Bearer ${token}`;
-    console.log('[profile] resolveCurrentUsername: fetching /users/me with headers', Object.keys(headers));
     const resp = await fetch(`https://${window.location.hostname}:8443/api/users/me`, { headers });
-    console.log('[profile] resolveCurrentUsername: /users/me status', resp.status);
     let body: any = null;
     try { body = await resp.json(); } catch (e) { console.warn('[profile] /users/me invalid json', e); }
-    console.log('[profile] resolveCurrentUsername: /users/me body', body);
-    console.log('[profile] resolveCurrentUsername: body.user', body?.user);
-    console.log('[profile] resolveCurrentUsername: body.user.username', body?.user?.username);
     if (resp.ok && body && body.user && body.user.username) {
-      console.log('[profile] resolveCurrentUsername: got username from /users/me', body.user.username);
       return body.user.username;
     }
   } catch (err) {
@@ -102,7 +91,6 @@ async function resolveCurrentUsername(): Promise<string | null> {
   // 3) fallback: localStorage (if the login saved the username there)
   try {
     const stored = localStorage.getItem('username');
-    console.log('[profile] resolveCurrentUsername: localStorage username', stored);
     if (stored) return stored;
   } catch (err) { console.error('[profile] resolveCurrentUsername: localStorage error', err); }
 
@@ -236,20 +224,13 @@ export function profileViewHandlers() {
 
     resultDiv.innerHTML = 'Cargando perfil...';
 
-    console.log('[profile] profileHandlers: start');
-    console.log('[profile] profileHandlers: current hash', window.location.hash);
-
     let username = parseUsernameFromHash();
-    console.log('[profile] profileHandlers: parsed username from hash', username);
 
     if (!username) {
-      console.log('[profile] profileHandlers: no username from hash, resolving current user');
       username = await resolveCurrentUsername();
-      console.log('[profile] profileHandlers: resolved current username', username);
     }
 
     if (!username) {
-      console.log('[profile] profileHandlers: no username resolved, showing error');
       resultDiv.innerHTML = `<span style='color:red'>No se pudo determinar el usuario. Especifica el username en la URL o inicia sesión.</span>`;
       return;
     }

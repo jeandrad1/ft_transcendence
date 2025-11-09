@@ -34,7 +34,6 @@ export async function getConversations() {
 
 // Function to select a conversation and load messages
 export async function selectConversation(otherUserId: number, otherUserName: string) {
-    console.log(`[Chat] Selecting conversation with user ID: ${otherUserId}, name: ${otherUserName}`);
     
     setActiveConversationId(otherUserId);
     setActiveConversationName(otherUserName);
@@ -53,7 +52,6 @@ export async function selectConversation(otherUserId: number, otherUserName: str
         
         // Then try to load the real avatar
         const avatarUrl = await getUserAvatar(otherUserId);
-        console.log(`[Chat] Avatar URL for user ${otherUserId}:`, avatarUrl);
         
         if (avatarUrl) {
             contactAvatar.innerHTML = `<img src="${avatarUrl}" alt="${otherUserName}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/>`;

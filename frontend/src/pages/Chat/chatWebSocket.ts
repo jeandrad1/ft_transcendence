@@ -42,7 +42,6 @@ function handleIncomingMessage(message: ChatMessage) {
         updateUserSearchModalStatus();
     } else if (message.type === 'user_deleted') {
             // A user was deleted - refresh conversations automatically
-        console.log(`User ${message.userId} was deleted - refreshing conversations`);
         loadConversationsDebounced();
 
         // If we're currently viewing the deleted user's conversation, clear it
@@ -116,7 +115,7 @@ function showTypingIndicator(show: boolean) {
         try {
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         } catch (err: any) {
-            
+
         }
     }
 }

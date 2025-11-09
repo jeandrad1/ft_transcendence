@@ -59,7 +59,6 @@ export async function handleTwoFA(tempToken: string, username: string, userId: n
                 const verifyData = await verifyRes.json();
                         
                 if (verifyRes.ok && verifyData.accessToken) {
-                    console.log("Entra 2");
                     setAccessToken(verifyData.accessToken);
                     localStorage.setItem("user", JSON.stringify(verifyData.user));
                     setText(twofaResult, "✅ 2FA verified, loggen in!");

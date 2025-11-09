@@ -19,7 +19,6 @@ export async function acceptFriendInvitation() {
         }
         return await res.json();
     } catch (err: any) {
-        console.log("Error:", err);
     }
 }
 
@@ -39,7 +38,6 @@ export async function rejectFriendInvitation() {
         }
         return await res.json();
     } catch (err: any) {
-        console.log("Error:", err);
     }
 }
 

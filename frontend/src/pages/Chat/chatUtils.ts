@@ -267,7 +267,6 @@ export async function getUserAvatar(userId: number): Promise<string | null> {
 
     try {
         const token = getAccessToken();
-        console.log(`[Avatar] Fetching avatar for user ID: ${userId}`);
         const response = await fetch(`https://${apiHost}:8443/api/users/getAvatar`, {
             method: 'GET',
             headers: {

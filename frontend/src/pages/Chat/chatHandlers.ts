@@ -279,10 +279,8 @@ export async function chatHandlers() {
 
         if (target.classList.contains('accept-friend-btn')) {
             const userId = getActiveConversationId();
-            console.log(`Accept friend clicked for user ${userId}`);
 
             const accepted = await acceptFriendInvitation();
-            console.log("Accepted:", accepted);
             if (accepted.success === false)
                 return ;
 
@@ -298,7 +296,6 @@ export async function chatHandlers() {
 
         if (target.classList.contains('reject-friend-btn')) {
             const userId = getActiveConversationId();
-            console.log(`Reject friend clicked for user ${userId}`);
 
             const rejected = await rejectFriendInvitation();
             if (rejected.success === "false")
