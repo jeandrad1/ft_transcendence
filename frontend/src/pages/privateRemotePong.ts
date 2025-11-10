@@ -378,7 +378,9 @@ function startGame(roomIdToJoin: string) {
 
     socket.on("gameStarting", () => {
         import("../utils/countdown").then(mod => {
-            mod.runCountdown('countdown', 1).then(() => {});
+            mod.runCountdown('countdown', 3).then(() => {
+                // Game will start automatically on server after 3 seconds
+            });
         }).catch(()=>{});
     });
 
