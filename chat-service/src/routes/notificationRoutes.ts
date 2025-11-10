@@ -48,8 +48,8 @@ export async function notificationsRoutes(fastify: FastifyInstance) {
         }
     }, getSpecificNotificationController);
 
-    // GET /conversations - Get all notifications from the user
-    fastify.get('/conversations/notifications/update', {
+    // PUT /conversations/notifications/update - Update all notifications from the user
+    fastify.put('/conversations/notifications/update', {
         schema: {
             body: UpdateNotificationsBodySchema,
             response: {
@@ -58,7 +58,8 @@ export async function notificationsRoutes(fastify: FastifyInstance) {
         }
     }, updateNotificationsController);
 
-    fastify.get('/conversations/:notId/read', {
+    // PUT /conversations/:notId/read - Mark notification as read
+    fastify.put('/conversations/:notId/read', {
         schema: {
             params: NotificationIdParamSchema,
             response: {
