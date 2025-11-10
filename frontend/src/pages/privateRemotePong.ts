@@ -57,8 +57,10 @@ export function privateRemotePongPage(): string {
             <div id="scoreboard" class="scoreboard">0 : 0</div>
         </div>
 
-        <canvas id="pongCanvas" width="${CANVAS_WIDTH}" height="${CANVAS_HEIGHT}"></canvas>
-        <div id="countdown" class="countdown hidden"></div>
+        <div class="game-info">
+            <canvas id="pongCanvas" width="${CANVAS_WIDTH}" height="${CANVAS_HEIGHT}"></canvas>
+            <div id="countdown" class="countdown hidden"></div>
+        </div>
         <p id="winnerMessage" class="winner-message" style="display:none"></p>
     </div>
     `;
