@@ -26,6 +26,11 @@ export const registerSchema = {
 };
 
 export const usernameChangerSchema = {
+  headers: {
+    type: 'object',
+    required: ['x-user-id'],
+    properties: { 'x-user-id': { type: 'string' } }
+  },
   body: {
     type: "object",
     required: ["newUsername"],
@@ -54,6 +59,11 @@ export const usernameChangerSchema = {
 };
 
 export const addVictorySchema = {
+  headers: {
+    type: 'object',
+    required: ['x-user-id'],
+    properties: { 'x-user-id': { type: 'string' } }
+  },
   body: {
     type: "object",
     additionalProperties: false
@@ -62,8 +72,9 @@ export const addVictorySchema = {
     200: {
       type: 'object',
       properties: {
-        result: { type: 'string' }
-      }
+        message: { type: 'string' }
+      },
+      required: ["message"]
     },
     401: {
       type: 'object',
@@ -74,6 +85,11 @@ export const addVictorySchema = {
 };
 
 export const passwordChangerSchema = {
+  headers: {
+    type: 'object',
+    required: ['x-user-id'],
+    properties: { 'x-user-id': { type: 'string' } }
+  },
   body: {
     type: "object",
     required: ["newPassword"],
@@ -90,8 +106,8 @@ export const passwordChangerSchema = {
   response: {
     200: {
       type: 'object',
-      properties: { result: { type: 'string' } },
-      required: ["result"]
+      properties: { message: { type: 'string' } },
+      required: ["message"]
     },
     400: {
       type: 'object',
@@ -140,9 +156,9 @@ export const getResultsSchema = {
       items: {
         type: 'object',
         properties: {
-          matchId: { type: 'string' },
-          result: { type: 'string' }, // "win" o "loss"
-          date: { type: 'string', format: 'date-time' }
+          matchId: { anyOf: [{ type: 'string' }, { type: 'number' }] },
+          result: { type: 'string' },
+          date: { type: 'string' }
         },
         required: ['matchId', 'result', 'date']
       }
@@ -244,6 +260,11 @@ export const getFriendSchema = {
 };
 
 export const addFriendSchema = {
+  headers: {
+    type: 'object',
+    required: ['x-user-id'],
+    properties: { 'x-user-id': { type: 'string' } }
+  },
   body: {
     type: 'object',
     required: ['friendId'],
@@ -270,6 +291,11 @@ export const addFriendSchema = {
 };
 
 export const removeFriendSchema = {
+  headers: {
+    type: 'object',
+    required: ['x-user-id'],
+    properties: { 'x-user-id': { type: 'string' } }
+  },
   body: {
     type: 'object',
     required: ['friendId'],
@@ -296,6 +322,11 @@ export const removeFriendSchema = {
 };
 
 export const checkFriendSchema = {
+  headers: {
+    type: 'object',
+    required: ['x-user-id'],
+    properties: { 'x-user-id': { type: 'string' } }
+  },
   body: {
     type: 'object',
     required: ['friendId'],
@@ -306,10 +337,14 @@ export const checkFriendSchema = {
   },
   response: {
     200: {
-      type: 'object',
-      properties: {
-        isFriend: { type: 'boolean' }
-      }
+      oneOf: [
+        {
+          type: 'object',
+          properties: { isFriend: { type: 'boolean' } },
+          required: ['isFriend']
+        },
+        { type: 'boolean' }
+      ]
     },
     400: {
       type: 'object',
@@ -425,7 +460,9 @@ export const userGetterByUsernameSchema = {
       properties: {
         id: { type: 'number' },
         username: { type: 'string' },
-        email: { type: 'string', format: 'email' }
+        email: { type: 'string', format: 'email' },
+        victories: { type: 'integer' },
+        defeats: { type: 'integer' }
       }
     },
     400: {
@@ -452,7 +489,9 @@ export const userGetterByEmailSchema = {
       properties: {
         id: { type: 'number' },
         username: { type: 'string' },
-        email: { type: 'string', format: 'email' }
+        email: { type: 'string', format: 'email' },
+        victories: { type: 'integer' },
+        defeats: { type: 'integer' }
       }
     },
     400: {
@@ -479,7 +518,9 @@ export const userGetterByIdSchema = {
       properties: {
         id: { type: 'number' },
         username: { type: 'string' },
-        email: { type: 'string', format: 'email' }
+        email: { type: 'string', format: 'email' },
+        victories: { type: 'integer' },
+        defeats: { type: 'integer' }
       }
     },
     400: {
@@ -598,7 +639,7 @@ export const passwordChangerControllerSchema = {
 export const getCurrentUserSchema = {
   headers: {
     type: 'object',
-    required: ['x-user-id', 'x-username'],
+    required: ['x-user-id'],
     properties: {
       'x-user-id': { type: 'string' },
       'x-username': { type: 'string' }
@@ -608,8 +649,20 @@ export const getCurrentUserSchema = {
     200: {
       type: 'object',
       properties: {
-        user: { type: 'object' }
-      }
+        user: {
+          type: 'object',
+          properties: {
+            id: { type: 'number' },
+            username: { type: 'string' },
+            email: { type: 'string', format: 'email' },
+            victories: { type: 'integer' },
+            defeats: { type: 'integer' },
+            matchHistory: { type: 'array', items: { type: 'object' } }
+          },
+          required: ['id', 'username', 'email']
+        }
+      },
+      required: ['user']
     },
     401: {
       type: 'object',
