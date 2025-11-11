@@ -321,6 +321,9 @@ export async function tournamentHandlers() {
     const startBtn = document.getElementById("start-btn");
 
     try {
+        if (backButton && tournamentHistory.length === 0)
+            backButton.style.display = "none";
+
         cards.forEach(card => {
             card.addEventListener("click", async () => {
                 currentTournamentId = Number(card.getAttribute("data-tournament-id"));
@@ -389,8 +392,12 @@ export async function tournamentHandlers() {
 
 
         localButton?.addEventListener("click", () => {
+            const tournamentContainer = document.getElementById("tournament-container");
+            if (tournamentContainer)
+                tournamentHistory.push(tournamentContainer.innerHTML);
+            if (backButton)
+                backButton.style.display = "block";
             setTournamentContent(getTournamentPlayersHtml());
-            tournamentHandlers();
         })
 
         onlineButton?.addEventListener("click", () => {
@@ -398,20 +405,30 @@ export async function tournamentHandlers() {
                 window.location.hash = "#/login";
                 return ;
             }
-            setTournamentContent(getTournamentRemoteModeHtml());
+            const tournamentContainer = document.getElementById("tournament-container");
+            if (tournamentContainer)
+                tournamentHistory.push(tournamentContainer.innerHTML);
+            if (backButton)
+                backButton.style.display = "block";
             isOnline = 1;
-            tournamentHandlers();
+            setTournamentContent(getTournamentRemoteModeHtml());
         })
 
         joinTournamentsButton?.addEventListener("click", async () => {
             const tournamentList = await getRemoteTournaments();
-            setTournamentContent(getTournamentListHtml(tournamentList));
             const tournamentTitle = document.getElementById("tournamentTitle");
             if (tournamentTitle)
                 tournamentTitle.style.marginBottom = "30px";
+            const tournamentContainer = document.getElementById("tournament-container");
+            if (tournamentContainer)
+                tournamentHistory.push(tournamentContainer.innerHTML);
+            setTournamentContent(getTournamentListHtml(tournamentList));
         })
 
         createOnlineTournamentButton?.addEventListener("click", () => {
+            const tournamentContainer = document.getElementById("tournament-container");
+            if (tournamentContainer)
+                tournamentHistory.push(tournamentContainer.innerHTML);
             setTournamentContent(getTournamentPlayersHtml());
         })
 
@@ -427,6 +444,9 @@ export async function tournamentHandlers() {
                     }
                     tournamentName = name.value;
                 }
+                const tournamentContainer = document.getElementById("tournament-container");
+                if (tournamentContainer)
+                    tournamentHistory.push(tournamentContainer.innerHTML);
                 setTournamentContent(getTournamentAliasFourHtml());
             }
             else {
@@ -441,6 +461,9 @@ export async function tournamentHandlers() {
                 }
                 currentTournamentId = await createRemoteTournament(tournamentName, tournamentPlayers);
                 const html = await getTournamentLobbyHTML(currentTournamentId)
+                const tournamentContainer = document.getElementById("tournament-container");
+                if (tournamentContainer)
+                    tournamentHistory.push(tournamentContainer.innerHTML);
                 setTournamentContent(html);
                 startFastPolling(currentTournamentId); // Start with fast polling to detect when tournament starts
             }
