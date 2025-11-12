@@ -29,6 +29,7 @@ export class WebSocketClient {
     // Connect to WebSocket server
     connect(userId: number): Promise<void> {
         return new Promise((resolve, reject) => {
+    
             if (this.ws?.readyState === WebSocket.OPEN) {
                 resolve();
                 return;
@@ -123,7 +124,8 @@ export class WebSocketClient {
 
     // Get connection status
     isConnected(): boolean {
-        return this.ws?.readyState === WebSocket.OPEN;
+        const connected = this.ws?.readyState === WebSocket.OPEN;
+        return connected;
     }
 
     // Get current user ID
