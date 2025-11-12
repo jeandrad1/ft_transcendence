@@ -513,7 +513,7 @@ function startGame(roomIdToJoin: string) {
                 registerMatchToPongService(playerRole,{
                     left: gameState.scores.left,
                     right: gameState.scores.right
-                }).catch(e => console.warn('Failed to register match on disconnect:', e));
+                }).catch(e => {});
                 sendVictoryToUserManagement().catch(() => {});
             }
         } 
@@ -632,7 +632,7 @@ function checkWinner() {
                 .then((matchId) => {
                     if (matchId) {
                     }
-                }).catch((e) => console.warn('Failed to register match', e));
+                }).catch((e) => {});
 
             sendVictoryToUserManagement().catch(() => {});
         } else {
