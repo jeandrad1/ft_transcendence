@@ -1,0 +1,131 @@
+services:
+
+  nginx:
+    build: ./nginx
+    ports:
+      - "8443:8443"
+    depends_on:
+      - frontend-dev
+      - gateway
+      - auth-service
+      - chat-service
+      - user-management-service
+      - pong-service
+      - ai-opponent
+      - tournament-service
+    volumes:
+      - frontend_dist:/usr/share/nginx/html
+    networks:
+      - backend
+
+  node-base:
+    build:
+      context: ./base-node-image
+    image: ft_transcendence-node-base:latest
+
+  frontend-dev:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    expose:
+      - "5173"
+    volumes:
+      - frontend_dist:/app/dist
+    depends_on:
+      - gateway
+    networks:
+      - backend
+
+  gateway:
+    build: ./gateway
+    expose:
+      - "8080"
+    env_file:
+      - ./gateway/.env
+    depends_on:
+      - node-base
+      - auth-service
+    networks:
+      - backend
+  
+  auth-service:
+    build: ./auth-service
+    expose:
+      - "8081"
+    depends_on:
+      - node-base
+    volumes:
+      - auth_data:/app/data
+    networks:
+      - backend
+    
+  user-management-service:
+    build: ./user-managment
+    expose:
+      - "8082"
+    depends_on:
+      - node-base
+    volumes:
+      - user_data:/app/data
+    networks:
+      - backend
+
+  chat-service:
+    build: ./chat-service
+    expose:
+      - "8083"
+    depends_on:
+      - node-base
+    volumes:
+      - chat_data:/app/data
+    networks:
+      - backend
+
+  pong-service:
+    build: ./server-side-pong
+    container_name: trascendence-pong-service
+    env_file:
+      - ./server-side-pong/.env
+    expose:
+      - "7000"
+    depends_on:
+      - node-base
+      - ai-opponent
+    volumes:
+      - pong_data:/app/db
+    networks:
+      - backend
+    
+  ai-opponent:
+     build: ./ai-opponent
+     container_name: trascendence-ai-opponent
+     env_file:
+        - ./ai-opponent/.env
+     expose:
+        - "7010"
+     networks:
+        - backend
+
+  tournament-service:
+    build: ./tournament-service
+    expose:
+      - "8085"
+    depends_on:
+      - node-base
+    volumes:
+      - tournament_data:/app/data
+    networks:
+      - backend
+
+networks:
+  backend:
+    name: backend
+    driver: bridge
+
+volumes:
+  auth_data:
+  user_data:
+  chat_data:
+  tournament_data:
+  pong_data:
+  frontend_dist:
