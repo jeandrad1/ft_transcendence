@@ -76,13 +76,13 @@ export async function sendEmail(to: string, subject: string, html: string): Prom
         const transporter = nodemailer.createTransport({
             service: "gmail",
             auth: {
-                user: process.env.EMAIL_USER,
+                user: process.env.EMAIL_ACCOUNT,
                 pass: process.env.EMAIL_PASS,
             },
         });
     
         const mailOptions = {
-            from: `"Ft-Transcendence" <${process.env.EMAIL_USER}>`,
+            from: `"Ft-Transcendence" <${process.env.EMAIL_ACCOUNT}>`,
             to,
             subject,
             html,
