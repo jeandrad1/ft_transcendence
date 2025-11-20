@@ -60,7 +60,7 @@ services:
       - backend
     
   user-management-service:
-    build: ./user-managment
+    build: ./user-management
     expose:
       - "8082"
     depends_on:
